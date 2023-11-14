@@ -7,7 +7,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from torchgeo.datasets import stack_samples
 from utils.polygon import mask_to_poly_geojson, gdf_to_yolo
-from utils.helpers import get_device, get_model, get_directory
+from utils.helpers import get_device, get_model, get_directory, cmd_interface
 from geo_blocks import RasterDataset, InferenceSampler, InferenceMerge
 
 from config.logging_config import logger
@@ -100,4 +100,11 @@ class GeoInference:
         logger.info('Extraction Completed in {:.0f}m {:.0f}s'.format(end_time // 60, end_time % 60))
                     
 if __name__ == "__main__":
-    pass
+    arguments = cmd_interface()
+    geo_inference = GeoInference(model_name=arguments["model_name"],
+                                 work_dir=arguments["work_dir"],
+                                 batch_size=arguments["batch_size"],
+                                 mask_to_vec=arguments["vec"],
+                                 device=arguments["device"],
+                                 gpu_id=arguments["gpu_id"])
+    geo_inference(tiff_image=arguments["image"])
