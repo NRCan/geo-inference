@@ -1,8 +1,13 @@
 import logging.config
 import yaml
 from datetime import datetime
+from pathlib import Path
+
 CONFIG_DIR = "./config/log_config.yaml"
-LOG_DIR = "./logs"
+USER_CACHE = Path.home().joinpath(".cache")
+LOG_DIR = LOG_DIR = USER_CACHE.joinpath("geo-inference/logs")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 timestamp = datetime.now().strftime("%Y%m%d-%H:%M:%S")
 logfilename =  f"{LOG_DIR}/{timestamp}.log"
 
