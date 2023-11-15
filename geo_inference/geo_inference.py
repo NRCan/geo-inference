@@ -43,10 +43,11 @@ class GeoInference:
                  mask_to_vec: bool = False,
                  device: str = "gpu",
                  gpu_id: int = 0):
-        self.batch_size = batch_size
+        self.gpu_id = int(gpu_id)
+        self.batch_size = int(batch_size)
         self.work_dir: Path = get_directory(work_dir)
         self.device = get_device(device=device, 
-                                 gpu_id=gpu_id)
+                                 gpu_id=self.gpu_id)
         model_path: Path = get_model(model_name=model_name, 
                                work_dir=self.work_dir)
         self.mask_to_vec = mask_to_vec
