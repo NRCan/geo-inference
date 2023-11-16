@@ -12,8 +12,31 @@ pip install geo-inference
 
 ## Usage
 
-Here's an example of how to use Geo Inference:
+Here's an example of how to use Geo Inference (Command line and Script):
 
+**Command line**
+```bash
+python geo_inference.py -a <args>
+```
+- `-a`, `--args`: Path to arguments stored in yaml, consult ./config/sample_config.yaml
+```bash
+python geo_inference.py -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v <vec> -d <device> -id <gpu_id>
+```
+- `-i`, `--image`: Path to Geotiff
+- `-m`, `--model`: Name of Extraction Model
+- `-wd`, `--work_dir`: Working Directory
+- `-bs`, `--batch_size`: The Batch Size
+- `-v`, `--vec`: Vector Conversion
+- `-d`, `--device`: CPU or GPU Device
+- `-id`, `--gpu_id`: GPU ID, Default = 0
+
+You can also use the `-h` option to get a list of supported arguments:
+
+```bash
+python geo_inference.py -h
+```
+
+**Import script**
 ```python
 from geo_inference import GeoInference
 
