@@ -55,7 +55,8 @@ class GeoInference:
         dummy_input = torch.ones((1, 3, 32, 32), device=self.device, dtype=torch.float)
         with torch.no_grad():
             self.classes = self.model(dummy_input).shape[1]
-        
+    
+    @torch.no_grad() 
     def __call__(self, tiff_image, patch_size: int = 512, stride_size: int = 256) -> None:
         """
         Perform geo inference on geospatial imagery.
@@ -89,7 +90,7 @@ class GeoInference:
             window_tensor = batch["window"].unsqueeze(1).to(self.device)
             pixel_xy = batch["pixel_coords"]
             output = self.model(image_tensor) 
-            merge_patches.merge_on_cpu(batch=output, windows=window_tensor, pixel_coords=pixel_xy)
+            merge_patches.merge_on_gpu(batch=output, windows=window_tensor, pixel_coords=pixel_xy)
         merge_patches.save_as_tiff(height=roi_height, 
                                    width=roi_width, 
                                    output_meta=output_meta, 

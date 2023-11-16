@@ -319,20 +319,15 @@ class InferenceMerge:
         self.width = width
         self.classes = classes
         self.device = device
-        self.image = np.zeros((self.classes, self.height, self.width), dtype=np.float16)
-        self.norm_mask = np.ones((1, self.height, self.width), dtype=np.float16)
-
+        # self.image = np.zeros((self.classes, self.height, self.width), dtype=np.float16)
+        # self.norm_mask = np.ones((1, self.height, self.width), dtype=np.float16)
+        self.image = torch.zeros((self.classes, self.height, self.width), dtype=torch.float16, device=self.device)
+        self.norm_mask = torch.ones((1, self.height, self.width), dtype=torch.float16, device=self.device)
+    
     @torch.no_grad()
-    def merge_on_gpu(self,):
+    def merge_on_gpu(self, batch: torch.Tensor, windows: torch.Tensor, pixel_coords):
         """
         Merge the patches on GPU.
-        """
-        pass
-
-    @torch.no_grad()
-    def merge_on_cpu(self, batch: torch.Tensor, windows: torch.Tensor, pixel_coords):
-        """
-        Merge the patches on CPU.
 
         Args:
             batch (torch.Tensor): The batch of inference results.
@@ -344,8 +339,15 @@ class InferenceMerge:
         """
         for output, window, (x, y, patch_width, patch_height) in zip(batch, windows, pixel_coords):
             output = F.softmax(output, dim=0) * window
-            self.image[:, y : y + patch_height, x : x + patch_width] += output.cpu().numpy()
-            self.norm_mask[:, y : y + patch_height, x : x + patch_width] += window.cpu().numpy()
+            self.image[:, y : y + patch_height, x : x + patch_width] += output
+            self.norm_mask[:, y : y + patch_height, x : x + patch_width] += window
+    
+    @torch.no_grad()
+    def merge_on_cpu(self,):
+        """
+        Merge the patches on CPU.
+        """
+        pass
 
     def save_as_tiff(self, 
                      height: int, 
@@ -365,7 +367,8 @@ class InferenceMerge:
             None
         """
         self.image /= self.norm_mask
-        self.image = np.argmax(self.image, axis=0).astype(np.uint8)
+        self.image = torch.argmax(self.image, dim=0).byte().cpu().numpy()
+        # self.image = np.argmax(self.image, axis=0).astype(np.uint8)
         self.image = self.image[np.newaxis, :height, :width]
         output_meta.update({"driver": "GTiff",
                             "height": self.image.shape[1],
