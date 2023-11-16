@@ -90,7 +90,7 @@ class GeoInference:
             window_tensor = batch["window"].unsqueeze(1).to(self.device)
             pixel_xy = batch["pixel_coords"]
             output = self.model(image_tensor) 
-            merge_patches.merge_on_gpu(batch=output, windows=window_tensor, pixel_coords=pixel_xy)
+            merge_patches.merge_on_cpu(batch=output, windows=window_tensor, pixel_coords=pixel_xy)
         merge_patches.save_as_tiff(height=roi_height, 
                                    width=roi_width, 
                                    output_meta=output_meta, 
