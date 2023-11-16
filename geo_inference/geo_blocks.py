@@ -1,3 +1,4 @@
+import os
 import sys
 import torch
 import logging
@@ -289,31 +290,30 @@ class InferenceSampler(GeoSampler):
 
 class InferenceMerge:
     """
-    A class for merging inference results from multiple patches into a single image.
-
-    Args:
-        height (int): The height of the output image.
-        width (int): The width of the output image.
-        classes (int): The number of classes in the output image.
-        device (str): The device to use for computation.
-
+    A class for merging inference results.
+    
     Attributes:
-        height (int): The height of the output image.
-        width (int): The width of the output image.
-        classes (int): The number of classes in the output image.
-        device (str): The device to use for computation.
-        image (numpy.ndarray): The merged image.
-        norm_mask (numpy.ndarray): The normalization mask.
+        height (int): The padded height of roi.
+        width (int): The padded width of roi.
+        classes (int): The number of classes.
+        device (torch.device): The device to use for computation.
+        image (np.ndarray): The merged image.
+        norm_mask (np.ndarray): The normalization mask.
+    
     """
-    def __init__(self, height, width, classes, device) -> None:
+    def __init__(self, 
+                 height: int, 
+                 width: int, 
+                 classes: int, 
+                 device: torch.device) -> None:
         """
         Initializes a new instance of the InferenceMerge class.
 
         Args:
-            height (int): The height of the output image.
-            width (int): The width of the output image.
-            classes (int): The number of classes in the output image.
-            device (str): The device to use for computation.
+            height (int): The padded height of roi.
+            width (int): The padded width of roi.
+            classes (int): The number of classes.
+            device (torch.device): The device to use for computation.
         """
         self.height = height
         self.width = width
@@ -347,20 +347,26 @@ class InferenceMerge:
             self.image[:, y : y + patch_height, x : x + patch_width] += output.cpu().numpy()
             self.norm_mask[:, y : y + patch_height, x : x + patch_width] += window.cpu().numpy()
 
-    def save_as_tiff(self, output_meta, output_path) -> torch.Tensor:
+    def save_as_tiff(self, 
+                     height: int, 
+                     width: int, 
+                     output_meta: dict, 
+                     output_path: os.PathLike) -> torch.Tensor:
         """
-        Save the merged image as a TIFF file.
+        Save mask to file. 
 
         Args:
-            output_meta (dict): The metadata for the output file.
-            output_path (str): The path to save the output file.
+            height (int): The height of the output mask.
+            width (int): The width of the output mask.
+            output_meta (dict): The meta data of the output mask.
+            output_path (os.PathLike): The path to save the output mask.
 
         Returns:
-            torch.Tensor: The merged image.
+            None
         """
         self.image /= self.norm_mask
         self.image = np.argmax(self.image, axis=0).astype(np.uint8)
-        self.image = self.image[np.newaxis, :, :]
+        self.image = self.image[np.newaxis, :height, :width]
         output_meta.update({"driver": "GTiff",
                             "height": self.image.shape[1],
                             "width": self.image.shape[2],

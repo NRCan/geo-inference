@@ -196,7 +196,21 @@ def get_model(model_name: str, work_dir: Path)-> Path:
     return cached_file
 
 def cmd_interface(argv=None):
-    
+    """
+    Parse command line arguments for extracting features from high-resolution imagery using pre-trained models.
+
+    Args:
+        argv (list): List of arguments to parse. If None, the arguments are taken from sys.argv.
+
+    Returns:
+        dict: A dictionary containing the parsed arguments.
+
+    Raises:
+        SystemExit: If the arguments are not valid.
+
+    Usage:
+        Use the -h option to get supported arguments.
+    """
     parser = argparse.ArgumentParser(usage="%(prog)s [-h HELP] use -h to get supported arguments.",
                                      description='Extract features from high-resolution imagery using pre-trained models.')
     

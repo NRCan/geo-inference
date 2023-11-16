@@ -90,7 +90,10 @@ class GeoInference:
             pixel_xy = batch["pixel_coords"]
             output = self.model(image_tensor) 
             merge_patches.merge_on_cpu(batch=output, windows=window_tensor, pixel_coords=pixel_xy)
-        merge_patches.save_as_tiff(output_meta, mask_path)
+        merge_patches.save_as_tiff(height=roi_height, 
+                                   width=roi_width, 
+                                   output_meta=output_meta, 
+                                   output_path=mask_path)
         
         if self.mask_to_vec:
             mask_to_poly_geojson(mask_path, polygons_path)
