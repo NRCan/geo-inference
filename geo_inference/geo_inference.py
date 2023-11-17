@@ -103,8 +103,8 @@ class GeoInference:
         end_time = time.time() - start_time
         
         logger.info('Extraction Completed in {:.0f}m {:.0f}s'.format(end_time // 60, end_time % 60))
-                    
-if __name__ == "__main__":
+
+def main() -> None:
     arguments = cmd_interface()
     geo_inference = GeoInference(model_name=arguments["model_name"],
                                  work_dir=arguments["work_dir"],
@@ -113,3 +113,6 @@ if __name__ == "__main__":
                                  device=arguments["device"],
                                  gpu_id=arguments["gpu_id"])
     geo_inference(tiff_image=arguments["image"])
+               
+if __name__ == "__main__":
+    main()
