@@ -10,7 +10,7 @@ import tarfile
 from pathlib import Path
 from urllib.parse import urlparse
 
-from config.logging_config import logger
+from ..config.logging_config import logger
 logger = logging.getLogger(__name__)
 
 USER_CACHE = Path.home().joinpath(".cache")
