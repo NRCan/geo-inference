@@ -3,7 +3,8 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 
-CONFIG_DIR = "./config/log_config.yaml"
+script_dir = Path(__file__).resolve().parent
+CONFIG_DIR = script_dir / "log_config.yaml"
 USER_CACHE = Path.home().joinpath(".cache")
 LOG_DIR = LOG_DIR = USER_CACHE.joinpath("geo-inference/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
