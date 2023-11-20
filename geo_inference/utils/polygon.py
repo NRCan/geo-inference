@@ -11,9 +11,9 @@ from rasterio import features
 from rasterio.warp import transform_bounds
 from shapely.geometry import shape, Polygon
 from rtree.core import RTreeError
-from utils.geo import rasterio_load, gdf_load, check_crs
+from .geo import rasterio_load, gdf_load, check_crs
 
-from config.logging_config import logger
+from ..config.logging_config import logger
 logger = logging.getLogger(__name__)
 
 def mask_to_poly_geojson(mask_path,
