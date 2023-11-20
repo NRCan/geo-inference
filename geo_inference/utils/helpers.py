@@ -14,7 +14,8 @@ from ..config.logging_config import logger
 logger = logging.getLogger(__name__)
 
 USER_CACHE = Path.home().joinpath(".cache")
-M0DEL_CONFIG = Path("./config/models.yaml")
+script_dir = Path(__file__).resolve().parent.parent
+M0DEL_CONFIG = script_dir / "config" /  "models.yaml"
 
 def is_tiff_path(path: str):
     # Check if the given path ends with .tiff or .tif (case insensitive)
