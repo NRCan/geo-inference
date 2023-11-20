@@ -20,7 +20,7 @@ classifiers = [
 keywords = ["pytorch", "deep learning", "machine learning", "remote sensing", "satellite imagery", "earth observation", "geospatial"]
 dependencies = [
     "affine>=2.3.0",
-    "colorlog=6.7.0",
+    "colorlog==6.7.0",
     "numpy>=1.19.3",
     "pandas>=1.1.3",
     "scipy>=1.11.2",
