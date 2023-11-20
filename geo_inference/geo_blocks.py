@@ -9,7 +9,7 @@ from rasterio.crs import CRS
 from rasterio.windows import Window
 from typing import (Any, Dict, Iterator, 
                     Optional, Tuple, Union, cast)
-from utils.helpers import validate_asset_type
+from .utils.helpers import validate_asset_type
 from torch import Tensor
 from torch.nn import functional as F
 from torchgeo.datasets import GeoDataset
@@ -17,7 +17,7 @@ from torchgeo.samplers import GeoSampler
 from torchgeo.samplers.utils import _to_tuple, tile_to_chips
 from torchgeo.datasets.utils import BoundingBox
 
-from config.logging_config import logger
+from .config.logging_config import logger
 logger = logging.getLogger(__name__)
 
 
