@@ -6,11 +6,11 @@ from tqdm import tqdm
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchgeo.datasets import stack_samples
-from utils.polygon import mask_to_poly_geojson, gdf_to_yolo
-from utils.helpers import get_device, get_model, get_directory, cmd_interface
-from geo_blocks import RasterDataset, InferenceSampler, InferenceMerge
+from .utils.polygon import mask_to_poly_geojson, gdf_to_yolo
+from .utils.helpers import get_device, get_model, get_directory, cmd_interface
+from .geo_blocks import RasterDataset, InferenceSampler, InferenceMerge
 
-from config.logging_config import logger
+from .config.logging_config import logger
 logger = logging.getLogger(__name__)
 
 
