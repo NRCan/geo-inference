@@ -1,0 +1,2 @@
+# MANIFEST.in
+include geo_inference/config/*.yaml
