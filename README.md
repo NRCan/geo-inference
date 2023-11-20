@@ -7,7 +7,7 @@ Geo Inference is a light-weight Python package for performing feature extraction
 To install Geo Inference, you can use pip:
 
 ```
-pip install geo-inference
+pip install geo-inference --extra-index-url=https://test.pypi.org/simple/
 ```
 
 ## Usage
