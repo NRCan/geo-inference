@@ -40,7 +40,7 @@ def gdf_load(gdf):
         # as of geopandas 0.6.2, using the OGR CSV driver requires some add'nal
         # kwargs to create a valid geodataframe with a geometry column. see
         # https://github.com/geopandas/geopandas/issues/1234
-        if gdf.lower().endswith('csv'):
+        if str(gdf).lower().endswith('csv'):
             return gpd.read_file(gdf, GEOM_POSSIBLE_NAMES="geometry",
                                  KEEP_GEOM_COLUMNS="NO")
         try:
