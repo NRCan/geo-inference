@@ -9,12 +9,12 @@ from geo_inference.utils.geo import rasterio_load, gdf_load, check_crs
 
 @pytest.fixture
 def test_data_dir():
-    return Path(__file__).parent / "test_data"
+    return Path(__file__).parent.parent / "data"
 
 class TestGeo:
     def test_rasterio_load(self, test_data_dir):
         # Test loading a rasterio image from a path
-        im_path = test_data_dir / "test.tif"
+        im_path = test_data_dir / "0.tif"
         with rasterio_load(im_path) as dataset:
             assert isinstance(dataset, rasterio.DatasetReader)
 
@@ -25,7 +25,7 @@ class TestGeo:
 
     def test_gdf_load(self, test_data_dir):
         # Test loading a GeoDataFrame from a path
-        gdf_path = test_data_dir / "test.geojson"
+        gdf_path = test_data_dir / "0_polygons.geojson"
         gdf = gdf_load(gdf_path)
         assert isinstance(gdf, gpd.GeoDataFrame)
 
