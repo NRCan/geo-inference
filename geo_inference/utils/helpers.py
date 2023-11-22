@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 USER_CACHE = Path.home().joinpath(".cache")
 script_dir = Path(__file__).resolve().parent.parent
-M0DEL_CONFIG = script_dir / "config" /  "models.yaml"
+MODEL_CONFIG = script_dir / "config" /  "models.yaml"
 
 def is_tiff_path(path: str):
     # Check if the given path ends with .tiff or .tif (case insensitive)
@@ -170,7 +170,7 @@ def get_directory(work_directory: str)-> Path:
     
     return work_directory
 
-def get_model(model_name: str, work_dir: Path)-> Path:
+def get_model(model_name: str, work_dir: Path) -> Path:
     """Download a model from the model zoo
 
     Args:
@@ -180,21 +180,23 @@ def get_model(model_name: str, work_dir: Path)-> Path:
     Returns:
         Path: Path to the model file.
     """
-    model_config = read_yaml(M0DEL_CONFIG)
-    if model_name is not None and model_name in model_config.keys():
+    model_config = read_yaml(MODEL_CONFIG)
+    if model_name is not None and model_name in model_config:
         model_dir = work_dir.joinpath(model_name)
         if not model_dir.is_dir():
-            Path.mkdir(model_dir, parents=True)
+            model_dir.mkdir(parents=True)
         cached_file = model_dir.joinpath(model_name + ".pt")
         if not cached_file.is_file():
-            access_token = os.environ["GEOSYS_TOKEN"]
+            access_token = os.environ.get("GEOSYS_TOKEN")
             url = model_config[model_name]["url"]
             tar_asset = model_dir.joinpath(url.split('/')[-1])
             logger.info(f"Downloading model asset {tar_asset}")
             download_file_from_url(url, tar_asset, access_token=access_token)
             extract_tar_gz(tar_asset, model_dir)
-    
-    return cached_file
+        return cached_file
+    else:
+        logger.error(f"Model name not found in model config: {model_name}")
+        raise ValueError("Invalid model name")
 
 def cmd_interface(argv=None):
     """
