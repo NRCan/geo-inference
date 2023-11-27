@@ -1,7 +1,8 @@
 import logging.config
-import yaml
 from datetime import datetime
 from pathlib import Path
+
+import yaml
 
 script_dir = Path(__file__).resolve().parent
 CONFIG_DIR = script_dir / "log_config.yaml"
