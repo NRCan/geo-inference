@@ -1,23 +1,24 @@
+import logging
 import os
 import sys
-import torch
-import logging
+from typing import Any, Dict, Iterator, Optional, Tuple, Union, cast
+
 import numpy as np
 import rasterio as rio
 import scipy.signal.windows as w
+import torch
 from rasterio.crs import CRS
 from rasterio.windows import Window
-from typing import (Any, Dict, Iterator, 
-                    Optional, Tuple, Union, cast)
-from .utils.helpers import validate_asset_type
 from torch import Tensor
 from torch.nn import functional as F
 from torchgeo.datasets import GeoDataset
+from torchgeo.datasets.utils import BoundingBox
 from torchgeo.samplers import GeoSampler
 from torchgeo.samplers.utils import _to_tuple, tile_to_chips
-from torchgeo.datasets.utils import BoundingBox
 
 from .config.logging_config import logger
+from .utils.helpers import validate_asset_type
+
 logger = logging.getLogger(__name__)
 
 
