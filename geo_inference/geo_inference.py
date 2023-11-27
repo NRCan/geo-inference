@@ -1,16 +1,17 @@
-import time
-import torch
 import logging
-
-from tqdm import tqdm
+import time
 from pathlib import Path
+
+import torch
 from torch.utils.data import DataLoader
 from torchgeo.datasets import stack_samples
-from .utils.polygon import mask_to_poly_geojson, gdf_to_yolo
-from .utils.helpers import get_device, get_model, get_directory, cmd_interface
-from .geo_blocks import RasterDataset, InferenceSampler, InferenceMerge
+from tqdm import tqdm
 
 from .config.logging_config import logger
+from .geo_blocks import InferenceMerge, InferenceSampler, RasterDataset
+from .utils.helpers import cmd_interface, get_device, get_directory, get_model
+from .utils.polygon import gdf_to_yolo, mask_to_poly_geojson
+
 logger = logging.getLogger(__name__)
 
 
