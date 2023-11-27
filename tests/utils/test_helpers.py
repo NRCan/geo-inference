@@ -1,12 +1,19 @@
 import io
 import os
-import torch
-import pytest
-import tarfile 
-
-from unittest.mock import patch, MagicMock, call
+import tarfile
 from pathlib import Path
-from geo_inference.utils.helpers import is_tiff_path, is_tiff_url, read_yaml, validate_asset_type, calculate_gpu_stats, download_file_from_url, extract_tar_gz, get_device, get_directory, get_model, cmd_interface
+from unittest.mock import MagicMock, patch
+
+import pytest
+import torch
+
+from geo_inference.utils.helpers import (calculate_gpu_stats,
+                                         download_file_from_url,
+                                         extract_tar_gz, get_device,
+                                         get_directory, get_model,
+                                         is_tiff_path, is_tiff_url, read_yaml,
+                                         validate_asset_type)
+
 
 @pytest.fixture
 def temp_tar_gz_file():
