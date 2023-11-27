@@ -1,13 +1,15 @@
 import logging
+from distutils.version import LooseVersion
+from pathlib import Path
+
+import geopandas as gpd
 import pyproj
 import rasterio
-import geopandas as gpd
-from pathlib import Path
-from distutils.version import LooseVersion
 from fiona._err import CPLE_OpenFailedError
 from fiona.errors import DriverError
 
 from ..config.logging_config import logger
+
 logger = logging.getLogger(__name__)
 
 """Utility funtions adapted from Solaris: https://github.com/CosmiQ/solaris/blob/main/solaris/utils/core.py"""
