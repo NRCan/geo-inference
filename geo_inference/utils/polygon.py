@@ -1,19 +1,21 @@
 """Adapted from Solaris: https://github.com/CosmiQ/solaris/tree/main/solaris """
 
-import os
-import shapely
-import rasterio
 import logging
-import pandas as pd
+import os
+
 import geopandas as gpd
+import pandas as pd
+import rasterio
+import shapely
 from affine import Affine
 from rasterio import features
 from rasterio.warp import transform_bounds
-from shapely.geometry import shape, Polygon
 from rtree.core import RTreeError
-from .geo import rasterio_load, gdf_load, check_crs
+from shapely.geometry import Polygon, shape
 
 from ..config.logging_config import logger
+from .geo import check_crs, gdf_load, rasterio_load
+
 logger = logging.getLogger(__name__)
 
 def mask_to_poly_geojson(mask_path,
