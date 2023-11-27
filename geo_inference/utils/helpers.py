@@ -1,16 +1,17 @@
+import argparse
+import logging
 import os
 import re
-import argparse
-import yaml
-import torch
-import logging
-import requests
 import tarfile
-
 from pathlib import Path
 from urllib.parse import urlparse
 
+import requests
+import torch
+import yaml
+
 from ..config.logging_config import logger
+
 logger = logging.getLogger(__name__)
 
 USER_CACHE = Path.home().joinpath(".cache")
