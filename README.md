@@ -12,7 +12,13 @@ pip install geo-inference --extra-index-url=https://test.pypi.org/simple/
 
 ## Usage
 
-Here's an example of how to use Geo Inference (Command line and Script):
+**Input:** GeoTiffs with exactly three bands (RGB) in data type (uint8). 
+To get the best performance ensure pixel size is in this range (0.1m to 3m).
+
+**Output:** Features Mask, Features Polygon (Vector-*geojson* and Yolo format-*csv*).
+
+
+*Here's an example of how to use Geo Inference (Command line and Script):*
 
 **Command line**
 ```bash
