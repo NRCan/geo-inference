@@ -27,7 +27,6 @@ class RasterDataset(GeoDataset):
     A dataset class for raster data.
     
     Attributes:
-        bbox: The bounding box of the image asset.
         image_asset: The path to the image asset.
         src: The rasterio dataset object.
         cmap: The colormap of the image asset.
@@ -36,15 +35,14 @@ class RasterDataset(GeoDataset):
         bands: The number of bands in the image asset.
         index: The rtree index of the image asset.
     """
-    def __init__(self, image_asset: str, bounding_box: tuple) -> None:
+    def __init__(self, image_asset: str, bbox: str = None) -> None:
         """Initializes a RasterDataset object.
         
         Args:
             image_asset (str): The path to the image asset.
-            bounding_box (tuple): The bounding box of the image asset.
+            bounding_box (str): The bounding box of the image asset.
         """
         super().__init__()
-        self.bbox = bounding_box
         self.image_asset = validate_asset_type(image_asset)
         
         if self.image_asset is None:
@@ -65,13 +63,28 @@ class RasterDataset(GeoDataset):
         
             mint: float = 0
             maxt: float = sys.maxsize
-
+            
+            if bbox is None:
+                bbox = BoundingBox(minx=minx, 
+                                   miny=miny, 
+                                   maxx=maxx, 
+                                   maxy=maxy, 
+                                   mint=mint, maxt=maxt)
+            else:
+                bbox = tuple(map(float, bbox.split(', ')))
+                bbox = BoundingBox(minx=bbox[0], 
+                                   miny=bbox[1], 
+                                   maxx=bbox[2], 
+                                   maxy=bbox[3], 
+                                   mint=mint, maxt=maxt)
+                
             coords = (minx, maxx, miny, maxy, mint, maxt)
             self.index.insert(0, coords, self.image_asset)
         
         self._crs = cast(CRS, crs)
         self.res = cast(float, res)
         self.bands = bands
+        self.bbox = bbox
     
     def __getitem__(self, query: Dict[str, Any]) -> Dict[str, Any]:
         """
