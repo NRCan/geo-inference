@@ -188,7 +188,7 @@ def get_model(model_name: str, work_dir: Path) -> Path:
             model_dir.mkdir(parents=True)
         cached_file = model_dir.joinpath(model_name + ".pt")
         if not cached_file.is_file():
-            access_token = os.environ.get("GEOSYS_TOKEN")
+            access_token = os.environ["GEOSYS_TOKEN"]
             url = model_config[model_name]["url"]
             tar_asset = model_dir.joinpath(url.split('/')[-1])
             logger.info(f"Downloading model asset {tar_asset}")
@@ -222,6 +222,8 @@ def cmd_interface(argv=None):
     
     parser.add_argument("-i", "--image", nargs=1, help="Path to Geotiff")
     
+    parser.add_argument("-bb", "--bbox", nargs=1, help="AOI bbox in this format'minx, miny, maxx, maxy'")
+    
     parser.add_argument("-m", "--model", nargs=1, help="Name of Extraction Model")
     
     parser.add_argument("-wd", "--work_dir", nargs=1, help="Working Directory")
@@ -239,6 +241,7 @@ def cmd_interface(argv=None):
     if args.args:
         config = read_yaml(args.args[0])
         image = config["arguments"]["image"]
+        bbox = config["arguments"]["bbox"]
         model_name = config["arguments"]["model"]
         work_dir = config["arguments"]["work_dir"]
         batch_size = config["arguments"]["batch_size"]
@@ -247,6 +250,7 @@ def cmd_interface(argv=None):
         gpu_id = config["arguments"]["gpu_id"]
     elif args.image:
         image = args.image[0]
+        bbox = args.bbox[0] if args.bbox else None
         model_name = args.model[0] if args.model else None
         work_dir = args.work_dir[0] if args.work_dir else None
         batch_size = args.batch_size[0] if args.batch_size else 1
@@ -258,6 +262,7 @@ def cmd_interface(argv=None):
         raise SystemExit
     
     arguments= {"image": image,
+                "bbox": bbox,
                 "model_name": model_name,
                 "work_dir": work_dir,
                 "batch_size": batch_size,
