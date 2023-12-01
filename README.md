@@ -29,6 +29,7 @@ python geo_inference.py -a <args>
 python geo_inference.py -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v <vec> -d <device> -id <gpu_id>
 ```
 - `-i`, `--image`: Path to Geotiff
+- `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
 - `-m`, `--model`: Name of Extraction Model
 - `-wd`, `--work_dir`: Working Directory
 - `-bs`, `--batch_size`: The Batch Size
@@ -44,7 +45,7 @@ python geo_inference.py -h
 
 **Import script**
 ```python
-from geo_inference import GeoInference
+from geo_inference.geo_inference import GeoInference
 
 # Initialize the GeoInference object
 geo_inference = GeoInference(
