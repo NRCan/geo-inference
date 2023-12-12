@@ -52,7 +52,8 @@ geo_inference = GeoInference(
     model_name="segformer_B5",
     work_dir="/path/to/work/dir",
     batch_size=4,
-    device_type="gpu",
+    mask_to_vec=True,
+    device="gpu",
     gpu_id=0
 )
 
