@@ -10,7 +10,7 @@ from tqdm import tqdm
 from .config.logging_config import logger
 from .geo_blocks import InferenceMerge, InferenceSampler, RasterDataset
 from .utils.helpers import cmd_interface, get_device, get_directory, get_model
-from .utils.polygon import gdf_to_yolo, mask_to_poly_geojson
+from .utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ class GeoInference:
         mask_path = self.work_dir.joinpath(Path(tiff_image).stem + "_mask.tif")
         polygons_path = self.work_dir.joinpath(Path(tiff_image).stem + "_polygons.geojson")
         yolo_csv_path = self.work_dir.joinpath(Path(tiff_image).stem + "_yolo.csv")
+        coco_json_path = self.work_dir.joinpath(Path(tiff_image).stem + "_coco.json")
         
         dataset = RasterDataset(tiff_image, bbox=bbox)
         sampler = InferenceSampler(dataset, size=patch_size, stride=stride_size, roi=dataset.bbox)
@@ -101,7 +102,8 @@ class GeoInference:
         if self.mask_to_vec:
             mask_to_poly_geojson(mask_path, polygons_path)
             gdf_to_yolo(polygons_path, mask_path, yolo_csv_path)
-        
+            geojson2coco(mask_path, polygons_path, coco_json_path)
+            
         end_time = time.time() - start_time
         
         logger.info('Extraction Completed in {:.0f}m {:.0f}s'.format(end_time // 60, end_time % 60))
