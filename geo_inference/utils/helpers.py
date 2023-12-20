@@ -181,22 +181,25 @@ def get_model(model_name: str, work_dir: Path) -> Path:
     Returns:
         Path: Path to the model file.
     """
-    model_config = read_yaml(MODEL_CONFIG)
-    if model_name is not None and model_name in model_config:
+    if model_name is not None:
         model_dir = work_dir.joinpath(model_name)
-        if not model_dir.is_dir():
-            model_dir.mkdir(parents=True)
         cached_file = model_dir.joinpath(model_name + ".pt")
-        if not cached_file.is_file():
-            access_token = os.environ["GEOSYS_TOKEN"]
-            url = model_config[model_name]["url"]
-            tar_asset = model_dir.joinpath(url.split('/')[-1])
-            logger.info(f"Downloading model asset {tar_asset}")
-            download_file_from_url(url, tar_asset, access_token=access_token)
-            extract_tar_gz(tar_asset, model_dir)
-        return cached_file
+        model_config = read_yaml(MODEL_CONFIG)
+        if model_name in model_config:
+            if not model_dir.is_dir():
+                model_dir.mkdir(parents=True)
+            if not cached_file.is_file():
+                access_token = os.environ["GEOSYS_TOKEN"]
+                url = model_config[model_name]["url"]
+                tar_asset = model_dir.joinpath(url.split('/')[-1])
+                logger.info(f"Downloading model asset {tar_asset}")
+                download_file_from_url(url, tar_asset, access_token=access_token)
+                extract_tar_gz(tar_asset, model_dir)
+            return cached_file
+        elif cached_file.is_file():
+            return cached_file
     else:
-        logger.error(f"Model name not found in model config: {model_name}")
+        logger.error(f"Model {model_name} cannot be found in work directory: {work_dir}")
         raise ValueError("Invalid model name")
 
 def cmd_interface(argv=None):
