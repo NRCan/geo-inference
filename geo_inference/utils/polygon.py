@@ -1,20 +1,17 @@
 """Adapted from Solaris: https://github.com/CosmiQ/solaris/tree/main/solaris """
 
 import logging
-import os
-
-import geopandas as gpd
+import json
 import pandas as pd
+import geopandas as gpd
 import rasterio
 import shapely
-from affine import Affine
 from rasterio import features
-from rasterio.warp import transform_bounds
-from rtree.core import RTreeError
-from shapely.geometry import Polygon, shape
+from shapely.geometry import shape
 
 from ..config.logging_config import logger
-from .geo import check_crs, gdf_load, rasterio_load
+from .geo import rasterio_load
+from .geo_transforms import geojson_to_px_gdf, df_to_coco_annos, make_coco_image_dict
 
 logger = logging.getLogger(__name__)
 
@@ -70,231 +67,6 @@ def mask_to_poly_geojson(mask_path,
     
     polygon_gdf.to_file(output_path, driver='GeoJSON')
     logger.info(f"GeoJSON saved to {output_path}")
-
-def convert_poly_coords(geom, affine_obj=None, inverse=False):
-    """Georegister geometry objects currently in pixel coords or vice versa.
-
-    Args:
-        geom : :class:`shapely.geometry.shape` or str
-            A :class:`shapely.geometry.shape`, or WKT string-formatted geometry
-            object currently in pixel coordinates.
-        
-        affine_obj: list or :class:`affine.Affine`
-            An affine transformation to apply to `geom` in the form of an
-            ``[a, b, d, e, xoff, yoff]`` list or an :class:`affine.Affine` object.
-            Required if not using `raster_src`.
-        inverse : bool, optional
-            If true, will perform the inverse affine transformation, going from
-            geospatial coordinates to pixel coordinates.
-
-    Returns:
-        out_geom
-            A geometry in the same format as the input with its coordinate system
-            transformed to match the destination object.
-    """
-
-    if not affine_obj:
-        raise ValueError("affine_obj must be provided.")
-    
-    if isinstance(affine_obj, Affine):
-        affine_xform = affine_obj
-    else:
-        # assume it's a list in either gdal or "standard" order
-        # (list_to_affine checks which it is)
-        if len(affine_obj) == 9:  # if it's straight from rasterio
-            affine_obj = affine_obj[0:6]
-            affine_xform = Affine(*affine_obj)
-
-    if inverse:  # geo->px transform
-        affine_xform = ~affine_xform
-
-    if isinstance(geom, str):
-        # get the polygon out of the wkt string
-        g = shapely.wkt.loads(geom)
-    elif isinstance(geom, shapely.geometry.base.BaseGeometry):
-        g = geom
-    else:
-        raise TypeError('The provided geometry is not an accepted format. '
-                        'This function can only accept WKT strings and '
-                        'shapely geometries.')
-
-    xformed_g = shapely.affinity.affine_transform(g, [affine_xform.a,
-                                                      affine_xform.b,
-                                                      affine_xform.d,
-                                                      affine_xform.e,
-                                                      affine_xform.xoff,
-                                                      affine_xform.yoff])
-    if isinstance(geom, str):
-        # restore to wkt string format
-        xformed_g = shapely.wkt.dumps(xformed_g)
-
-    return xformed_g
-
-def affine_transform_gdf(gdf, affine_obj, inverse=False, geom_col="geometry"):
-    """Perform an affine transformation on a GeoDataFrame.
-
-    Args:
-        gdf : :class:`geopandas.GeoDataFrame`, :class:`pandas.DataFrame`, or `str`
-            A GeoDataFrame, pandas DataFrame with a ``"geometry"`` column (or a
-            different column containing geometries, identified by `geom_col` -
-            note that this column will be renamed ``"geometry"`` for ease of use
-            with geopandas), or the path to a saved file in .geojson or .csv
-            format.
-        affine_obj : list or :class:`affine.Affine`
-            An affine transformation to apply to `geom` in the form of an
-            ``[a, b, d, e, xoff, yoff]`` list or an :class:`affine.Affine` object.
-        inverse : bool, optional
-            Use this argument to perform the inverse transformation.
-        geom_col : str, optional
-            The column in `gdf` corresponding to the geometry. Defaults to
-            ``'geometry'``.
-        precision : int, optional
-            Decimal precision to round the geometries to. If not provided, no
-            rounding is performed.
-    Returns:
-        gdf : :class:`geopandas.GeoDataFrame`
-    """
-    if isinstance(gdf, str):  # assume it's a geojson
-        if gdf.lower().endswith('json'):
-            gdf = gpd.read_file(gdf)
-        elif gdf.lower().endswith('csv'):
-            gdf = pd.read_csv(gdf)
-        else:
-            raise ValueError(
-                "The file format is incompatible with this function.")
-    if 'geometry' not in gdf.columns:
-        gdf = gdf.rename(columns={geom_col: 'geometry'})
-    if not isinstance(gdf['geometry'][0], Polygon):
-        gdf['geometry'] = gdf['geometry'].apply(shapely.wkt.loads)
-    gdf["geometry"] = gdf["geometry"].apply(convert_poly_coords,
-                                            affine_obj=affine_obj,
-                                            inverse=inverse)
-    # the CRS is no longer valid - remove it
-    gdf.crs = None
-
-    return gdf
-
-def geojson_to_px_gdf(geojson, im_path, geom_col='geometry',
-                      output_path=None, override_crs=False):
-    """Convert a geojson or set of geojsons from geo coords to px coords.
-
-    Args:
-        geojson : str
-            Path to a geojson. This function will also accept a
-            :class:`pandas.DataFrame` or :class:`geopandas.GeoDataFrame` with a
-            column named ``'geometry'`` in this argument.
-        im_path : str
-            Path to a georeferenced image (ie a GeoTIFF) that geolocates to the
-            same geography as the `geojson`(s). This function will also accept a
-            :class:`osgeo.gdal.Dataset` or :class:`rasterio.DatasetReader` with
-            georeferencing information in this argument.
-        geom_col : str, optional
-            The column containing geometry in `geojson`. If not provided, defaults
-            to ``"geometry"``.
-        output_path : str, optional
-            Path to save the resulting output to. If not provided, the object
-            won't be saved to disk.
-        override_crs: bool, optional
-            Useful if the geojsons generated by the vector tiler or otherwise were saved
-            out with a non EPSG code projection. True sets the gdf crs to that of the 
-            image, the inputs should have the same underlying projection for this to work. 
-            If False, and the gdf does not have an EPSG code, this function will fail.
-    Returns:
-        output_df : :class:`pandas.DataFrame`
-            A :class:`pandas.DataFrame` with all geometries in `geojson` that
-            overlapped with the image at `im_path` converted to pixel coordinates.
-            Additional columns are included with the filename of the source
-            geojson (if available) and images for reference.
-
-    """
-    # get the bbox and affine transforms for the image
-    im = rasterio_load(im_path)
-    if isinstance(im_path, rasterio.DatasetReader):
-        im_path = im_path.name
-    # make sure the geo vector data is loaded in as geodataframe(s)
-    gdf = gdf_load(geojson)
-
-    if len(gdf):  # if there's at least one geometry
-        if override_crs:
-            gdf.crs = im.crs 
-        overlap_gdf = get_overlapping_subset(gdf, im)
-    else:
-        overlap_gdf = gdf
-
-    affine_obj = im.transform
-    transformed_gdf = affine_transform_gdf(overlap_gdf, affine_obj=affine_obj,
-                                           inverse=True, geom_col=geom_col)
-    transformed_gdf['image_fname'] = os.path.split(im_path)[1]
-
-    if output_path is not None:
-        if output_path.lower().endswith('json'):
-            transformed_gdf.to_file(output_path, driver='GeoJSON')
-        else:
-            transformed_gdf.to_csv(output_path, index=False)
-    return transformed_gdf
-
-def get_overlapping_subset(gdf, im=None, bbox=None, bbox_crs=None):
-    """Extract a subset of geometries in a GeoDataFrame that overlap with `im`.
-
-    Notes
-    -----
-    This function uses RTree's spatialindex, which is much faster (but slightly
-    less accurate) than direct comparison of each object for overlap.
-
-    Args:
-        gdf : :class:`geopandas.GeoDataFrame`
-            A :class:`geopandas.GeoDataFrame` instance or a path to a geojson.
-        im : :class:`rasterio.DatasetReader` or `str`, optional
-            An image object loaded with `rasterio` or a path to a georeferenced
-            image (i.e. a GeoTIFF).
-        bbox : `list` or :class:`shapely.geometry.Polygon`, optional
-            A bounding box (either a :class:`shapely.geometry.Polygon` or a
-            ``[bottom, left, top, right]`` `list`) from an image. Has no effect
-            if `im` is provided (`bbox` is inferred from the image instead.) If
-            `bbox` is passed and `im` is not, a `bbox_crs` should be provided to
-            ensure correct geolocation - if it isn't, it will be assumed to have
-            the same crs as `gdf`.
-        bbox_crs : int, optional
-            The coordinate reference system that the bounding box is in as an EPSG
-            int. If not provided, it's assumed that the CRS is the same as `im`
-            (if provided) or `gdf` (if not).
-
-    Returns:
-        output_gdf : :class:`geopandas.GeoDataFrame`
-            A :class:`geopandas.GeoDataFrame` with all geometries in `gdf` that
-            overlapped with the image at `im`.
-            Coordinates are kept in the CRS of `gdf`.
-
-    """
-    if im is None and bbox is None:
-        raise ValueError('Either `im` or `bbox` must be provided.')
-    gdf = gdf_load(gdf)
-    sindex = gdf.sindex
-    if im is not None:
-        im = rasterio_load(im)
-        # currently, convert CRSs to WKT strings here to accommodate rasterio.
-        bbox = transform_bounds(im.crs, check_crs(gdf.crs, return_rasterio=True),
-                                *im.bounds)
-        bbox_crs = im.crs
-    # use transform_bounds in case the crs is different - no effect if not
-    if isinstance(bbox, Polygon):
-        bbox = bbox.bounds
-    if bbox_crs is None:
-        try:
-            bbox_crs = check_crs(gdf.crs, return_rasterio=True)
-        except AttributeError:
-            raise ValueError('If `im` and `bbox_crs` are not provided, `gdf`'
-                             'must provide a coordinate reference system.')
-    else:
-        bbox_crs = check_crs(bbox_crs, return_rasterio=True)
-    # currently, convert CRSs to WKT strings here to accommodate rasterio.
-    bbox = transform_bounds(bbox_crs, check_crs(gdf.crs, return_rasterio=True), *bbox)
-    try:
-        intersectors = list(sindex.intersection(bbox))
-    except RTreeError:
-        intersectors = []
-
-    return gdf.iloc[intersectors, :]
 
 def gdf_to_yolo(geojson_path="", mask_path="", output_path="", column='value',
                 im_size=(0, 0), min_overlap=0.66):
@@ -366,6 +138,116 @@ def gdf_to_yolo(geojson_path="", mask_path="", output_path="", column='value',
             gdf = gdf.join(boxy)
             gdf.to_csv(path_or_buf=output, sep=' ', columns=header, index=False, header=False)
             logger.info(f"Yolo file saved to {output}")
+
+def geojson2coco(image_src, label_src, output_path=None, category_attribute="value", score_attribute=None,
+                 preset_categories=None, include_other=True, info_dict=None,
+                 license_dict=None, verbose=0):
+    """Generate COCO-formatted labels from mask and polygon geojson.
+
+    Args:
+        image_src (str): A string path to an image.
+        label_src (str): A string path to a geojson.
+        output_path (str, optional): The path to save the JSON-formatted COCO records to. If not provided,
+            the records will only be returned as a dict, and not saved to file.
+        category_attribute (str, optional): The name of an attribute in the geojson that specifies which category
+            a given instance corresponds to. If not provided, it's assumed that only one class of object is present
+            in the dataset, which will be termed "other" in the output json.
+        score_attribute (str, optional): The name of an attribute in the geojson that specifies the prediction
+            confidence of a model.
+        preset_categories (list of dicts, optional): A pre-set list of categories to use for labels. These categories
+            should be formatted per the COCO category specification. Example:
+            [{'id': 1, 'name': 'Fighter Jet', 'supercategory': 'plane'},
+            {'id': 2, 'name': 'Military Bomber', 'supercategory': 'plane'}, ... ]
+        include_other (bool, optional): If set to True, and preset_categories is provided, objects that don't fall
+            into the specified categories will not be removed from the dataset. They will instead be passed into a
+            category named "other" with its own associated category id. If False, objects whose categories don't match
+            a category from preset_categories will be dropped.
+        info_dict (dict, optional): A dictionary with the following key-value pairs:
+            - "year": int year of creation
+            - "version": str version of the dataset
+            - "description": str string description of the dataset
+            - "contributor": str who contributed the dataset
+            - "url": str URL where the dataset can be found
+            - "date_created": datetime.datetime when the dataset was created
+        license_dict (dict, optional): A dictionary containing the licensing information for the dataset, with the
+            following key-value pairs:
+            - "name": str the name of the license.
+            - "url": str a link to the dataset's license.
+            Note: This implementation assumes that all of the data uses one license. If multiple licenses are provided,
+            the image records will not be assigned a license ID.
+        verbose (int, optional): Verbose text output. By default, none is provided; if True or 1, information-level
+            outputs are provided; if 2, extremely verbose text is output.
+
+    Returns:
+        dict: A dictionary following the COCO dataset specification. Depending on arguments provided, it may or may
+        not include license and info metadata.
+    """
+    logger.debug('Loading labels.')
+    label_df = pd.DataFrame({'label_fname': [],
+                             'category_str': [],
+                             'geometry': []})
+    curr_gdf = gpd.read_file(label_src)
+
+    curr_gdf['label_fname'] = label_src
+    curr_gdf['image_fname'] = ''
+    curr_gdf['image_id'] = 1
+    if category_attribute is None:
+        logger.debug('No category attribute provided. Creating a default "other" category.')
+        curr_gdf['category_str'] = 'other'  # add arbitrary value
+        tmp_category_attribute = 'category_str'
+    else:
+        tmp_category_attribute = category_attribute
+   
+    logger.debug('Converting to pixel coordinates.')
+    curr_gdf = geojson_to_px_gdf(curr_gdf, image_src)
+    curr_gdf = curr_gdf.rename(columns={tmp_category_attribute: 'category_str'})
+    if score_attribute is not None:
+        curr_gdf = curr_gdf[['image_id', 'label_fname', 'category_str', score_attribute, 'geometry']]
+    else:
+        curr_gdf = curr_gdf[['image_id', 'label_fname', 'category_str', 'geometry']]
+    label_df = pd.concat([label_df, curr_gdf], axis='index', ignore_index=True, sort=False)
+
+    logger.info('Generating COCO-formatted annotations.')
+    coco_dataset = df_to_coco_annos(label_df,
+                                    geom_col='geometry',
+                                    image_id_col='image_id',
+                                    category_col='category_str',
+                                    score_col=score_attribute,
+                                    preset_categories=preset_categories,
+                                    include_other=include_other,
+                                    verbose=verbose)
+
+    logger.debug('Generating COCO-formatted image and license records.')
+    if license_dict is not None:
+        logger.debug('Getting license ID.')
+        if len(license_dict) == 1:
+            logger.debug('Only one license present; assuming it applies to all images.')
+            license_id = 1
+        else:
+            logger.debug('Zero or multiple licenses present. Not trying to match to images.')
+            license_id = None
+        logger.debug('Adding licenses to dataset.')
+        coco_licenses = []
+        license_idx = 1
+        for license_name, license_url in license_dict.items():
+            coco_licenses.append({'name': license_name,
+                                  'url': license_url,
+                                  'id': license_idx})
+            license_idx += 1
+        coco_dataset['licenses'] = coco_licenses
+    else:
+        logger.debug('No license information provided, skipping for image COCO records.')
+        license_id = None
+    coco_image_records = make_coco_image_dict({image_src: 1}, license_id)
+    coco_dataset['images'] = coco_image_records
+
+    if info_dict is not None:
+        coco_dataset['info'] = info_dict
+
+    
+    with open(output_path, 'w') as outfile:
+        json.dump(coco_dataset, outfile)
+    logger.info(f"CocoJson file saved to {output_path}")
 
 if __name__ == "__main__":
     pass
