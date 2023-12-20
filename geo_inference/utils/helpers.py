@@ -198,8 +198,11 @@ def get_model(model_name: str, work_dir: Path) -> Path:
             return cached_file
         elif cached_file.is_file():
             return cached_file
+        else:
+            logger.error(f"Model {model_name} cannot be found in model zoo: {MODEL_CONFIG}")
+            raise ValueError("Invalid model name")
     else:
-        logger.error(f"Model {model_name} cannot be found in work directory: {work_dir}")
+        logger.error("Model name cannot be None")
         raise ValueError("Invalid model name")
 
 def cmd_interface(argv=None):
