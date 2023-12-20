@@ -2,9 +2,13 @@ import logging
 from distutils.version import LooseVersion
 from pathlib import Path
 
+import pandas as pd
 import geopandas as gpd
 import pyproj
 import rasterio
+from shapely.wkt import loads
+from shapely.geometry import Point
+from shapely.geometry.base import BaseGeometry
 from fiona._err import CPLE_OpenFailedError
 from fiona.errors import DriverError
 
@@ -56,7 +60,32 @@ def gdf_load(gdf):
         return gdf
     else:
         raise ValueError(f"{gdf} is not an accepted GeoDataFrame format.")
-    
+
+def df_load(df):
+    """Check if `df` is already loaded in, if not, load from file."""
+    if isinstance(df, str):
+        if df.lower().endswith('json'):
+            return gdf_load(df)
+        else:
+            return pd.read_csv(df)
+    elif isinstance(df, pd.DataFrame):
+        return df
+    else:
+        raise ValueError(f"{df} is not an accepted DataFrame format.")
+
+def check_geom(geom):
+    """Check if a geometry is loaded in.
+
+    Returns the geometry if it's a shapely geometry object. If it's a wkt
+    string or a list of coordinates, convert to a shapely geometry.
+    """
+    if isinstance(geom, BaseGeometry):
+        return geom
+    elif isinstance(geom, str):  # assume it's a wkt
+        return loads(geom)
+    elif isinstance(geom, list) and len(geom) == 2:  # coordinates
+        return Point(geom)
+
 def check_crs(input_crs, return_rasterio=False):
     """Check the input CRS and return a pyproj CRS object.
 
