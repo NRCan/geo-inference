@@ -47,10 +47,15 @@ def test_read_yaml():
         mock_open.assert_called_once_with('test.yaml', 'r')
 
 def test_validate_asset_type(tmp_path):
-    with patch('geo_inference.utils.helpers.is_tiff_path', return_value=True), patch('geo_inference.utils.helpers.is_tiff_url', return_value=True):
-        tiff = str(tmp_path / 'test.tiff')
-        assert validate_asset_type(tiff) == tiff
-        assert validate_asset_type('http://example.com/test.tiff') == 'http://example.com/test.tiff'
+    local_tiff_path = str(tmp_path / 'test.tiff')
+    url_image = "http://example.com/test.tiff"
+    invalid_url = "http://example.com/test.jpg"
+    invalid_path = "/path/to/test.tiff"
+    assert validate_asset_type(local_tiff_path) == local_tiff_path
+    assert validate_asset_type(url_image) == url_image
+    assert validate_asset_type(invalid_url) == None
+    assert validate_asset_type(invalid_path) == None
+        
 
 def test_calculate_gpu_stats():
     with patch('torch.cuda.utilization', return_value=50), patch('torch.cuda.mem_get_info', return_value=(500, 1000)):
