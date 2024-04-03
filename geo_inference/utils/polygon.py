@@ -19,7 +19,7 @@ def mask_to_poly_geojson(mask_path,
                          output_path="", 
                          min_area=40,
                          simplify=False,
-                         tolerance=0.5):
+                         tolerance=1.):
     """Get polygons from an image mask.
 
     Args:
