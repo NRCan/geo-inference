@@ -144,8 +144,6 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-/tests/data/test*.tiff
-/tests/data/inference/0*
 logs/
 
 # Pyre type checker
