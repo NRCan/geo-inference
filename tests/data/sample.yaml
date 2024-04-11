@@ -1,0 +1,9 @@
+arguments:
+  image: "./data/areial.tiff"     # Path to Geotiff
+  bbox: None                      # "minx, miny, maxx, maxy" 
+  model: "rgb-4class-segformer"   # Name of Extraction Model: str
+  work_dir: None                  # Working Directory: str
+  batch_size: 1                   # Batch size
+  vec: False                      # Vector Coversion: bool 
+  device: "gpu"                   # cpu or gpu: str
+  gpu_id: 0                       # GPU ID: int
