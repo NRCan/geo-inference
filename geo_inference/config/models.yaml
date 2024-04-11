@@ -1,5 +1,0 @@
-rgb-4class-segformer-b5:
-  url: https://git.geoproc.geogc.ca/geoml/extraction_pipeline/models/rgb-4class-segformer-b5/-/archive/v0.0.0/rgb-4class-segformer-b5-v0.0.0.tar.gz
-
-test_model:
-  url: ""
