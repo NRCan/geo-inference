@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict
 
+import os
 import pytest
 import numpy as np
 import scipy.signal.windows as w
@@ -142,3 +143,4 @@ class TestInferenceMerge:
         output_path = test_data_dir / "test_1.tiff"
         inference_merge.save_as_tiff(height, width, output_meta, output_path)
         assert output_path.exists()
+        os.remove(output_path)
