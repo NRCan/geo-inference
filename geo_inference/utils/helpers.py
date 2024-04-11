@@ -171,39 +171,31 @@ def get_directory(work_directory: str)-> Path:
     
     return work_directory
 
-def get_model(model_name: str, work_dir: Path) -> Path:
+def get_model(model_path_or_url: str, work_dir: Path) -> Path:
     """Download a model from the model zoo
 
     Args:
-        model_name (str): Model name.
+        model_path_or_url (str): Path or url of model file.
         work_dir (Path): Working directory.
 
     Returns:
         Path: Path to the model file.
     """
-    if model_name is not None:
-        model_dir = work_dir.joinpath(model_name)
-        cached_file = model_dir.joinpath(model_name + ".pt")
-        model_config = read_yaml(MODEL_CONFIG)
-        if model_name in model_config:
-            if not model_dir.is_dir():
-                model_dir.mkdir(parents=True)
-            if not cached_file.is_file():
-                access_token = os.environ["GEOSYS_TOKEN"]
-                url = model_config[model_name]["url"]
-                tar_asset = model_dir.joinpath(url.split('/')[-1])
-                logger.info(f"Downloading model asset {tar_asset}")
-                download_file_from_url(url, tar_asset, access_token=access_token)
-                extract_tar_gz(tar_asset, model_dir)
-            return cached_file
-        elif cached_file.is_file():
-            return cached_file
-        else:
-            logger.error(f"Model {model_name} cannot be found in model zoo: {MODEL_CONFIG}")
-            raise ValueError("Invalid model name")
+    parsed_string = urlparse(model_path_or_url)
+    if parsed_string.scheme:
+        model_url = model_path_or_url
+        model_name = os.path.basename(parsed_string.path)
+        cached_file = work_dir.joinpath(model_name)
+        if not cached_file.is_file():
+            download_file_from_url(model_url, cached_file)
+        return cached_file
     else:
-        logger.error("Model name cannot be None")
-        raise ValueError("Invalid model name")
+        model_path = Path(model_path_or_url)
+        if model_path.is_file():
+            return model_path
+        else:
+            logger.error(f"Model {model_path_or_url} not found")
+            raise ValueError("Invalid model path")
 
 def cmd_interface(argv=None):
     """
@@ -230,7 +222,7 @@ def cmd_interface(argv=None):
     
     parser.add_argument("-bb", "--bbox", nargs=1, help="AOI bbox in this format'minx, miny, maxx, maxy'")
     
-    parser.add_argument("-m", "--model", nargs=1, help="Name of Extraction Model")
+    parser.add_argument("-m", "--model", nargs=1, help="Path or URL to the model file")
     
     parser.add_argument("-wd", "--work_dir", nargs=1, help="Working Directory")
     
@@ -248,7 +240,7 @@ def cmd_interface(argv=None):
         config = read_yaml(args.args[0])
         image = config["arguments"]["image"]
         bbox = config["arguments"]["bbox"]
-        model_name = config["arguments"]["model"]
+        model = config["arguments"]["model"]
         work_dir = config["arguments"]["work_dir"]
         batch_size = config["arguments"]["batch_size"]
         vec = config["arguments"]["vec"]
@@ -257,7 +249,7 @@ def cmd_interface(argv=None):
     elif args.image:
         image = args.image[0]
         bbox = args.bbox[0] if args.bbox else None
-        model_name = args.model[0] if args.model else None
+        model = args.model[0] if args.model else None
         work_dir = args.work_dir[0] if args.work_dir else None
         batch_size = args.batch_size[0] if args.batch_size else 1
         vec = args.vec[0] if args.vec else False
@@ -269,7 +261,7 @@ def cmd_interface(argv=None):
     
     arguments= {"image": image,
                 "bbox": bbox,
-                "model_name": model_name,
+                "model": model,
                 "work_dir": work_dir,
                 "batch_size": batch_size,
                 "vec": vec,
