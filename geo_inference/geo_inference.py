@@ -38,7 +38,7 @@ class GeoInference:
     """
 
     def __init__(self,
-                 model_name: str = None,
+                 model: str = None,
                  work_dir: str = None,
                  batch_size: int = 1,
                  mask_to_vec: bool = False,
@@ -49,8 +49,8 @@ class GeoInference:
         self.work_dir: Path = get_directory(work_dir)
         self.device = get_device(device=device, 
                                  gpu_id=self.gpu_id)
-        model_path: Path = get_model(model_name=model_name, 
-                               work_dir=self.work_dir)
+        model_path: Path = get_model(model_path_or_url=model, 
+                                     work_dir=self.work_dir)
         self.mask_to_vec = mask_to_vec
         self.model = torch.jit.load(model_path, map_location=self.device)
         dummy_input = torch.ones((1, 3, 32, 32), device=self.device, dtype=torch.float)
@@ -110,7 +110,7 @@ class GeoInference:
 
 def main() -> None:
     arguments = cmd_interface()
-    geo_inference = GeoInference(model_name=arguments["model_name"],
+    geo_inference = GeoInference(model=arguments["model"],
                                  work_dir=arguments["work_dir"],
                                  batch_size=arguments["batch_size"],
                                  mask_to_vec=arguments["vec"],
