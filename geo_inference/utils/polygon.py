@@ -89,7 +89,7 @@ def gdf_to_yolo(geojson_path="", mask_path="", output_path="", column='value',
             Path to an output directory where all of the yolo readable text files
             will be placed.
         column : str, optional
-            The column name that contians an unique integer id for each of object
+            The column name that contains a unique integer id for each of object
             class.
         im_size : tuple, optional
             A tuple specifying the x and y heighth of a an image.  If specified as
@@ -248,8 +248,5 @@ def geojson2coco(image_src, label_src, output_path=None, category_attribute="val
     with open(output_path, 'w') as outfile:
         json.dump(coco_dataset, outfile)
     logger.info(f"CocoJson file saved to {output_path}")
-
-if __name__ == "__main__":
-    pass
 
 
