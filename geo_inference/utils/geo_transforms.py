@@ -15,7 +15,7 @@ from affine import Affine
 from rasterio import features
 from rasterio.warp import transform_bounds
 from rtree.core import RTreeError
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, mapping, shape
 
 from ..config.logging_config import logger
 from .geo import check_crs, check_geom, df_load, gdf_load, rasterio_load
@@ -23,6 +23,11 @@ from .geo import check_crs, check_geom, df_load, gdf_load, rasterio_load
 logger = logging.getLogger(__name__)
 
 
+def _reduce_geom_precision(geom, precision=2):
+    geojson = mapping(geom)
+    geojson['coordinates'] = np.round(np.array(geojson['coordinates']),
+                                      precision)
+    return shape(geojson)
 
 def convert_poly_coords(geom, affine_obj=None, inverse=False):
     """Georegister geometry objects currently in pixel coords or vice versa.
@@ -83,7 +88,7 @@ def convert_poly_coords(geom, affine_obj=None, inverse=False):
 
     return xformed_g
 
-def affine_transform_gdf(gdf, affine_obj, inverse=False, geom_col="geometry"):
+def affine_transform_gdf(gdf, affine_obj, inverse=False, geom_col="geometry", precision=None):
     """Perform an affine transformation on a GeoDataFrame.
 
     Args:
@@ -122,6 +127,9 @@ def affine_transform_gdf(gdf, affine_obj, inverse=False, geom_col="geometry"):
     gdf["geometry"] = gdf["geometry"].apply(convert_poly_coords,
                                             affine_obj=affine_obj,
                                             inverse=inverse)
+    if precision is not None:
+        gdf['geometry'] = gdf['geometry'].apply(
+            _reduce_geom_precision, precision=precision)
     # the CRS is no longer valid - remove it
     gdf.crs = None
 
