@@ -1,3 +1,4 @@
+import os
 import pytest
 import torch
 from geo_inference.geo_inference import GeoInference
@@ -10,13 +11,13 @@ def test_data_dir():
 class TestGeoInference:
     @pytest.fixture
     def geo_inference(self, test_data_dir):
-        model_name = 'test_model'
+        model = str(test_data_dir / "inference"/ "test_model" / "test_model.pt")
         work_dir = str(test_data_dir / "inference")
         batch_size = 1
         mask_to_vec = True
         device = 'cpu'
         gpu_id = 0
-        return GeoInference(model_name, work_dir, batch_size, mask_to_vec, device, gpu_id)
+        return GeoInference(model, work_dir, batch_size, mask_to_vec, device, gpu_id)
 
     def test_init(self, geo_inference, test_data_dir):
         assert geo_inference.gpu_id == 0
@@ -38,5 +39,11 @@ class TestGeoInference:
         if geo_inference.mask_to_vec:
             polygons_path = geo_inference.work_dir / "0_polygons.geojson"
             yolo_csv_path = geo_inference.work_dir / "0_yolo.csv"
+            coco_path = geo_inference.work_dir / "0_coco.json"
             assert polygons_path.exists()
             assert yolo_csv_path.exists()
+            assert coco_path.exists()
+            os.remove(polygons_path)
+            os.remove(yolo_csv_path)
+            os.remove(coco_path)
+        os.remove(mask_path)
