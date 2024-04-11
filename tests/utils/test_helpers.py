@@ -12,17 +12,18 @@ from geo_inference.utils.helpers import (calculate_gpu_stats,
                                          extract_tar_gz, get_device,
                                          get_directory, get_model,
                                          is_tiff_path, is_tiff_url, read_yaml,
-                                         validate_asset_type)
+                                         validate_asset_type,
+                                         cmd_interface)
 
 @pytest.fixture
-def tmp_path():
+def test_data_dir():
     return Path(__file__).parent.parent / "data"
 
 @pytest.fixture
-def temp_tar_gz_file(tmp_path):
+def temp_tar_gz_file(test_data_dir):
     tar_gz_content = b'test_content'
-    tar_gz_file_path = tmp_path / 'test.tar.gz'
-    tif = str(tmp_path / 'test.tiff')
+    tar_gz_file_path = test_data_dir / 'test.tar.gz'
+    tif = str(test_data_dir / 'dummy.pt')
     with tarfile.open(tar_gz_file_path, 'w:gz') as tar:
         tarinfo = tarfile.TarInfo(tif)
         tarinfo.size = len(tar_gz_content)
@@ -39,15 +40,21 @@ def test_is_tiff_url():
     assert is_tiff_url('http://example.com/test.tif') == True
     assert is_tiff_url('http://example.com/test.jpg') == False
 
-def test_read_yaml():
-    with patch('builtins.open', new_callable=MagicMock) as mock_open:
-        mock_open.return_value.__enter__.return_value.read.return_value = "key: value"
-        result = read_yaml('test.yaml')
-        assert result == {"key": "value"}
-        mock_open.assert_called_once_with('test.yaml', 'r')
+def test_read_yaml(test_data_dir):
+    config_path = str(test_data_dir / 'sample.yaml')
+    result = read_yaml(config_path)
+    assert result["arguments"] == {"image": "./data/areial.tiff",
+                                   "bbox": "None",
+                                   "model": "rgb-4class-segformer",
+                                   "work_dir": "None",
+                                   "batch_size": 1,
+                                   "vec": False,
+                                   "device": "gpu",
+                                   "gpu_id": 0
+                                   }
 
-def test_validate_asset_type(tmp_path):
-    local_tiff_path = str(tmp_path / 'test.tiff')
+def test_validate_asset_type(test_data_dir):
+    local_tiff_path = str(test_data_dir / '0.tif')
     url_image = "http://example.com/test.tiff"
     invalid_url = "http://example.com/test.jpg"
     invalid_path = "/path/to/test.tiff"
@@ -56,24 +63,24 @@ def test_validate_asset_type(tmp_path):
     assert validate_asset_type(invalid_url) == None
     assert validate_asset_type(invalid_path) == None
         
-
 def test_calculate_gpu_stats():
     with patch('torch.cuda.utilization', return_value=50), patch('torch.cuda.mem_get_info', return_value=(500, 1000)):
         assert calculate_gpu_stats() == ({'gpu': 50}, {'used': 500, 'total': 1000})
 
-def test_download_file_from_url(tmp_path):
+def test_download_file_from_url(test_data_dir):
     with patch('requests.get') as mocked_get:
         mocked_get.return_value.status_code = 200
         mocked_get.return_value.iter_content.return_value = [b'test']
-        tif = str(tmp_path / 'test.tiff')
-        download_file_from_url('http://example.com/test.tiff', tif)
+        download_path = str(test_data_dir / 'dummy.tif')
+        download_file_from_url('http://example.com/dummy.tiff', download_path)
+        os.remove(download_path)
 
-def test_extract_tar_gz(temp_tar_gz_file, tmp_path):
-    target_directory = tmp_path
-    extract_tar_gz(temp_tar_gz_file, target_directory)
-    extracted_file_path = tmp_path / 'test.tiff'
+def test_extract_tar_gz(temp_tar_gz_file, test_data_dir):
+    extract_tar_gz(temp_tar_gz_file, test_data_dir)
+    extracted_file_path = test_data_dir / 'dummy.pt'
     assert extracted_file_path.is_file()
     assert not temp_tar_gz_file.is_file()
+    os.remove(extracted_file_path)
 
 def test_get_device():
     with patch('geo_inference.utils.helpers.calculate_gpu_stats') as mock_calculate_gpu_stats:
@@ -85,21 +92,63 @@ def test_get_directory():
     with patch('pathlib.Path.is_dir', return_value=False), patch('pathlib.Path.mkdir'):
         assert get_directory('test') == Path('test')
 
-def test_get_model_with_invalid_model():
-    with patch('geo_inference.utils.helpers.read_yaml') as mock_read_yaml:
-        mock_read_yaml.return_value = {"model1": {"url": "https://example.com/model1.tar.gz"}}
-        with pytest.raises(ValueError, match="Invalid model name"):
-            get_model("invalid_model", Path("work_dir"))
+def test_get_model_local_file(test_data_dir):
+    model_file = test_data_dir / "inference" / "test_model" / "test_model.pt"
+    model_path = get_model(str(model_file), test_data_dir)
+    assert model_path == model_file
 
-def test_get_model_with_missing_geosys_token(tmp_path):
-    with patch('geo_inference.utils.helpers.read_yaml') as mock_read_yaml, \
-         patch('geo_inference.utils.helpers.Path') as mock_path:
-        mock_read_yaml.return_value = {"model1": {"url": "https://example.com/model1.tar.gz"}}
-        mock_path.return_value.joinpath.return_value.is_dir.return_value = False
-        mock_path.return_value.joinpath.return_value.is_file.return_value = False
-        # Mocking os.environ to simulate missing GEOSYS_TOKEN
-        with patch.dict(os.environ, clear=True):
-            with pytest.raises(KeyError):
-                get_model("model1", tmp_path)
-        
-            
+@patch('geo_inference.utils.helpers.download_file_from_url')
+def test_get_model_url(mock_download_file_from_url, test_data_dir):
+    mock_download_file_from_url.return_value = None
+    model_path = get_model("https://example.com/test_model.pt", test_data_dir)
+    assert model_path == test_data_dir / "test_model.pt"
+    
+def test_get_model_file_not_exists(test_data_dir):
+    with pytest.raises(ValueError):
+        get_model('nonexistent_model.pth', test_data_dir)
+
+def test_cmd_interface_with_args(monkeypatch, test_data_dir):
+    config_path = str(test_data_dir / 'sample.yaml')
+    # Mock the command line arguments
+    monkeypatch.setattr('sys.argv', ['prog', '-a', config_path])
+
+    # Call the function
+    result = cmd_interface()
+    
+    assert result == {"image": "./data/areial.tiff",
+                      "bbox": "None",
+                      "model": "rgb-4class-segformer",
+                      "work_dir": "None",
+                      "batch_size": 1,
+                      "vec": False,
+                      "device": "gpu",
+                      "gpu_id": 0
+                      }
+
+def test_cmd_interface_with_image(monkeypatch):
+    # Mock the command line arguments
+    monkeypatch.setattr('sys.argv', ['prog', '-i', 'image.tif'])
+
+
+    # Call the function
+    result = cmd_interface()
+
+    # Assert the result
+    assert result == {
+        "image": "image.tif",
+        "bbox": None,
+        "model": None,
+        "work_dir": None,
+        "batch_size": 1,
+        "vec": False,
+        "device": "gpu",
+        "gpu_id": 0
+    }
+
+def test_cmd_interface_no_args(monkeypatch):
+    # Mock the command line arguments
+    monkeypatch.setattr('sys.argv', ['prog'])
+
+    # Call the function and assert that it raises SystemExit
+    with pytest.raises(SystemExit):
+        cmd_interface()
