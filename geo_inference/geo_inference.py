@@ -20,7 +20,7 @@ class GeoInference:
     A class for performing geo inference on geospatial imagery using a pre-trained model.
 
     Args:
-        model_name (str): The name of the pre-trained model to use.
+        model (str): The path or url to the model file
         work_dir (str): The directory where the model and output files will be saved.
         batch_size (int): The batch size to use for inference.
         mask_to_vec (bool): Whether to convert the output mask to vector format.
