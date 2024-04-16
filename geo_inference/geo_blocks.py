@@ -8,6 +8,7 @@ import rasterio as rio
 import scipy.signal.windows as w
 import torch
 from rasterio.crs import CRS
+from scipy.special import expit
 from rasterio.windows import Window
 from torch import Tensor
 from torch.nn import functional as F
@@ -352,7 +353,10 @@ class InferenceMerge:
             None
         """
         for output, window, (x, y, patch_width, patch_height) in zip(batch, windows, pixel_coords):
-            output = F.softmax(output, dim=0) * window
+            if self.classes == 1:
+                output = F.sigmoid(output) * window
+            else:
+                output = F.softmax(output, dim=0) * window
             self.image[:, y : y + patch_height, x : x + patch_width] += output.cpu().numpy()
             self.norm_mask[:, y : y + patch_height, x : x + patch_width] += window.cpu().numpy()
     
@@ -380,9 +384,17 @@ class InferenceMerge:
         Returns:
             None
         """
+        threshold = 0.5
         self.image /= self.norm_mask
-        # self.image = torch.argmax(self.image, dim=0).byte().cpu().numpy()
-        self.image = np.argmax(self.image, axis=0).astype(np.uint8)
+        
+        # Binary mask
+        if self.image.shape[0] == 1:
+            self.image = expit(self.image)
+            self.image = np.where(self.image > threshold, 1, 0).astype(np.uint8)
+        else:
+            self.image = np.argmax(self.image, axis=0).astype(np.uint8)
+            # self.image = torch.argmax(self.image, dim=0).byte().cpu().numpy()
+            
         self.image = self.image[np.newaxis, :height, :width]
         output_meta.update({"driver": "GTiff",
                             "height": self.image.shape[1],
