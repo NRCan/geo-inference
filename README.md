@@ -1,21 +1,23 @@
 # Geo Inference
 
-Geo Inference is a light-weight Python package for performing feature extraction from high-resolution imagery using custom pre-trained foundation models. It provides a convenient way to extract features from large TIFF images and save the output as a TIFF file. It also supports converting the output mask to a polygon GeoJSON file and a YOLO CSV file.
+geo-inference is a Python package designed for feature extraction from geospatial imagery using compatible deep learning models. It provides a convenient way to extract features from large TIFF images and save the output mask as a TIFF file. It also supports converting the output mask to vector format (*file_name.geojson*), YOLO format (*file_name.csv*), and COCO format (*file_name.json*). This package is particularly useful for applications in remote sensing, environmental monitoring, and urban planning.
 
 ## Installation
 
-To install Geo Inference, you can use pip:
+Geo-inference requires Python 3.11 or later. To install the package, use:
 
 ```
-pip install geo-inference --extra-index-url=https://test.pypi.org/simple/
+pip install geo-inference
 ```
 
 ## Usage
 
-**Input:** GeoTiffs with exactly three bands (RGB) in data type (uint8). 
-To get the best performance ensure pixel size is in this range (0.1m to 3m).
+**Input:** GeoTiffs with compatible TorchScript model. For example: A pytorch model trained on high resolution geospatial imagery with the following features:
 
-**Output:** Features Mask, Features Polygon (Vector-*geojson* and Yolo format-*csv*).
+- pixel size (0.1m to 3m)
+- data type (uint8)
+
+expects an input image with the same features. An example notebook for how the package is used is provided in this repo. 
 
 
 *Here's an example of how to use Geo Inference (Command line and Script):*
@@ -30,7 +32,7 @@ python geo_inference.py -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
-- `-m`, `--model`: Name of Extraction Model
+- `-m`, `--model`: Path or URL to the model file
 - `-wd`, `--work_dir`: Working Directory
 - `-bs`, `--batch_size`: The Batch Size
 - `-v`, `--vec`: Vector Conversion
@@ -49,7 +51,7 @@ from geo_inference.geo_inference import GeoInference
 
 # Initialize the GeoInference object
 geo_inference = GeoInference(
-    model_name="segformer_B5",
+    model="/path/to/segformer_B5.pt",
     work_dir="/path/to/work/dir",
     batch_size=4,
     mask_to_vec=True,
@@ -68,10 +70,10 @@ geo_inference(image_path, patch_size, stride_size)
 
 The `GeoInference` class takes the following parameters:
 
-- `model_name`: The name of the model to use for feature extraction.
+- `model`: The path or URL to the model file (.pt for PyTorch models) to use for feature extraction.
 - `work_dir`: The path to the working directory. Default is `"~/.cache"`.
 - `batch_size`: The batch size to use for feature extraction. Default is `4`.
-- `mask_to_vec`: The bool value to create vector files. Default is `"False"`
+- `mask_to_vec`: If set to `"True"`, vector files will be created. Default is `"False"`
 - `device`: The device to use for feature extraction. Can be `"cpu"` or `"gpu"`. Default is `"gpu"`.
 - `gpu_id`: The ID of the GPU to use for feature extraction. Default is `0`.
 
@@ -83,17 +85,12 @@ The `GeoInference` class outputs the following files:
 - `polygons.geojson`: The output polygon file in GeoJSON format. This file is only generated if the `mask_to_vec` parameter is set to `True`.
 - `yolo.csv`: The output YOLO file in CSV format. This file is only generated if the `mask_to_vec` parameter is set to `True`.
 
-## Available Models
-- `RGB_4class_Segformer_B5`: Not released to the public.
-- `RBG_4class_HRNet_W48`: Not released to the public.
+Each file contains the extracted features from the input geospatial imagery.
 
 ## License
 
 Geo Inference is released under the MIT License. See `LICENSE` for more information.
 
-<!--  
-## Acknowledgments
+## Contact
 
-This project was inspired by the [SpaceNet Challenge](https://spacenet.ai/).
-
--->
+For any questions or concerns, please open an issue on GitHub.
