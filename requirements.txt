@@ -234,6 +234,13 @@ pyproj==3.6.1
     #   geo-inference (pyproject.toml)
     #   geopandas
     #   torchgeo
+pytest==8.1.1
+    # via
+    #   lightly
+    #   lightly-utils
+    #   torchgeo
+pytest-cov==5.0.0
+    # via lightly  
 python-dateutil==2.8.2
     # via
     #   lightly
