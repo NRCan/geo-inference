@@ -4,7 +4,7 @@ geo-inference is a Python package designed for feature extraction from geospatia
 
 ## Installation
 
-Geo-inference requires Python 3.11 or later. To install the package, use:
+Geo-inference requires Python 3.11. To install the package, use:
 
 ```
 pip install geo-inference
