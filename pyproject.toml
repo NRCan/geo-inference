@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geo-inference"
-version = "2.0.0"
+version = "2.0.1"
 description = "Extract features from geospatial imagery using deep learning models"
 readme = "README.md"
 authors = [{ name = "Victor Alhassan", email = "victor.alhassan@nrcan-rncan.gc.ca" }]
@@ -51,7 +51,7 @@ geo_inference = "geo_inference.geo_inference:main"
 include = ["geo_inference*"]
 
 [tool.bumpver]
-current_version = "2.0.0"
+current_version = "2.0.1"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
