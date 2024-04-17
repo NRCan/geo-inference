@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "geo-inference"
 version = "2.0.0"
-description = "Extract features from high-resolution geospatial imagery using foundation models"
+description = "Extract features from geospatial imagery using deep learning models"
 readme = "README.md"
 authors = [{ name = "Victor Alhassan", email = "victor.alhassan@nrcan-rncan.gc.ca" }]
 license = { file = "LICENSE" }
