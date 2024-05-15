@@ -58,7 +58,7 @@ class GeoInference:
             self.classes = self.model(dummy_input).shape[1]
     
     @torch.no_grad() 
-    def __call__(self, tiff_image: str, bbox: str = None, patch_size: int = 512, stride_size: int = 256) -> None:
+    def __call__(self, tiff_image: str, bbox: str = None, patch_size: int = 512, stride_size: str = None) -> None:
         """
         Perform geo inference on geospatial imagery.
 
@@ -78,7 +78,7 @@ class GeoInference:
         coco_json_path = self.work_dir.joinpath(Path(tiff_image).stem + "_coco.json")
         
         dataset = RasterDataset(tiff_image, bbox=bbox)
-        sampler = InferenceSampler(dataset, size=patch_size, stride=stride_size, roi=dataset.bbox)
+        sampler = InferenceSampler(dataset, size=patch_size, stride=patch_size >> 1 if stride_size is None else stride_size, roi=dataset.bbox)
         roi_height = sampler.im_height 
         roi_width = sampler.im_width
         h_padded, w_padded = roi_height + patch_size, roi_width + patch_size
