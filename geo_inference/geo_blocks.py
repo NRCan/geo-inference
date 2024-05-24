@@ -353,10 +353,12 @@ class InferenceMerge:
             None
         """
         for output, window, (x, y, patch_width, patch_height) in zip(batch, windows, pixel_coords):
-            if self.classes == 1:
-                output = F.sigmoid(output) * window
-            else:
-                output = F.softmax(output, dim=0) * window
+            # It is best to have these functions scripted in the model
+            # if self.classes == 1:
+            #     output = F.sigmoid(output) * window
+            # else:
+            #     output = F.softmax(output, dim=0) * window
+            output = output * window
             self.image[:, y : y + patch_height, x : x + patch_width] += output.cpu().numpy()
             self.norm_mask[:, y : y + patch_height, x : x + patch_width] += window.cpu().numpy()
     
