@@ -37,7 +37,7 @@ class ScriptModel(torch.nn.Module):
         output = self.model_scripted(input.to(self.device))
         if self.from_logits:
             if self.num_classes == 1:
-                return F.logsigmoid(output)
+                return F.sigmoid(output)
             else:
-                return F.log_softmax(output, dim=1)
+                return F.softmax(output, dim=1)
         return output
