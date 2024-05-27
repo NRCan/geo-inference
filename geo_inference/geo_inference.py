@@ -53,9 +53,6 @@ class GeoInference:
                                      work_dir=self.work_dir)
         self.mask_to_vec = mask_to_vec
         self.model = torch.jit.load(model_path, map_location=self.device)
-        dummy_input = torch.ones((1, 3, 32, 32), device=self.device, dtype=torch.float)
-        with torch.no_grad():
-            self.classes = self.model(dummy_input).shape[1]
     
     @torch.no_grad() 
     def __call__(self, tiff_image: str, bbox: str = None, patch_size: int = 512, stride_size: str = None) -> None:
@@ -83,7 +80,7 @@ class GeoInference:
         roi_width = sampler.im_width
         h_padded, w_padded = roi_height + patch_size, roi_width + patch_size
         output_meta = dataset.src.meta
-        merge_patches = InferenceMerge(height=h_padded, width=w_padded, classes=self.classes, device=self.device)
+        merge_patches = InferenceMerge(height=h_padded, width=w_padded, device=self.device)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, sampler=sampler, collate_fn=stack_samples)
         
         start_time = time.time()
