@@ -310,7 +310,6 @@ class InferenceMerge:
     Attributes:
         height (int): The padded height of roi.
         width (int): The padded width of roi.
-        classes (int): The number of classes.
         device (torch.device): The device to use for computation.
         image (np.ndarray): The merged image.
         norm_mask (np.ndarray): The normalization mask.
@@ -318,8 +317,7 @@ class InferenceMerge:
     """
     def __init__(self, 
                  height: int, 
-                 width: int, 
-                 classes: int, 
+                 width: int,  
                  device: torch.device) -> None:
         """
         Initializes a new instance of the InferenceMerge class.
@@ -327,12 +325,10 @@ class InferenceMerge:
         Args:
             height (int): The padded height of roi.
             width (int): The padded width of roi.
-            classes (int): The number of classes.
             device (torch.device): The device to use for computation.
         """
         self.height = height
         self.width = width
-        self.classes = classes
         self.device = device
         self.image = np.zeros((self.classes, self.height, self.width), dtype=np.float16)
         self.norm_mask = np.ones((1, self.height, self.width), dtype=np.float16)
