@@ -60,6 +60,8 @@ class RasterDataset(GeoDataset):
             crs = src.crs
             res = src.res[0]
             bands = src.count
+            image_height = src.height
+            image_width = src.width
             minx, miny, maxx, maxy = src.bounds
         
             mint: float = 0
@@ -86,6 +88,8 @@ class RasterDataset(GeoDataset):
         self.res = cast(float, res)
         self.bands = bands
         self.bbox = bbox
+        self.image_height = image_height
+        self.image_width = image_width
     
     def __getitem__(self, query: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -317,7 +321,8 @@ class InferenceMerge:
     """
     def __init__(self, 
                  height: int, 
-                 width: int,  
+                 width: int,
+                 classes: int,  
                  device: torch.device) -> None:
         """
         Initializes a new instance of the InferenceMerge class.
@@ -329,6 +334,7 @@ class InferenceMerge:
         """
         self.height = height
         self.width = width
+        self.classes = classes
         self.device = device
         self.image = np.zeros((self.classes, self.height, self.width), dtype=np.float16)
         self.norm_mask = np.ones((1, self.height, self.width), dtype=np.float16)
@@ -388,7 +394,7 @@ class InferenceMerge:
         # Binary mask
         if self.image.shape[0] == 1:
             self.image = expit(self.image)
-            self.image = np.where(self.image > threshold, 1, 0).astype(np.uint8)
+            self.image = np.where(self.image > threshold, 1, 0).squeeze(0).astype(np.uint8)
         else:
             self.image = np.argmax(self.image, axis=0).astype(np.uint8)
             # self.image = torch.argmax(self.image, dim=0).byte().cpu().numpy()
