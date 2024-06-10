@@ -53,6 +53,9 @@ class GeoInference:
                                      work_dir=self.work_dir)
         self.mask_to_vec = mask_to_vec
         self.model = torch.jit.load(model_path, map_location=self.device)
+        dummy_input = torch.ones((1, 3, 32, 32), device=self.device)
+        with torch.no_grad():
+            self.classes = self.model(dummy_input).shape[1]
     
     @torch.no_grad() 
     def __call__(self, tiff_image: str, bbox: str = None, patch_size: int = 512, stride_size: str = None) -> None:
@@ -80,7 +83,7 @@ class GeoInference:
         roi_width = sampler.im_width
         h_padded, w_padded = roi_height + patch_size, roi_width + patch_size
         output_meta = dataset.src.meta
-        merge_patches = InferenceMerge(height=h_padded, width=w_padded, device=self.device)
+        merge_patches = InferenceMerge(height=h_padded, width=w_padded, classes=self.classes, device=self.device)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, sampler=sampler, collate_fn=stack_samples)
         
         start_time = time.time()
@@ -91,8 +94,8 @@ class GeoInference:
             pixel_xy = batch["pixel_coords"]
             output = self.model(image_tensor) 
             merge_patches.merge_on_cpu(batch=output, windows=window_tensor, pixel_coords=pixel_xy)
-        merge_patches.save_as_tiff(height=roi_height, 
-                                   width=roi_width, 
+        merge_patches.save_as_tiff(height=dataset.image_height, 
+                                   width=dataset.image_width, 
                                    output_meta=output_meta, 
                                    output_path=mask_path)
         
