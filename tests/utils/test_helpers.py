@@ -1,6 +1,7 @@
 import io
 import os
 import tarfile
+import rasterio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -49,6 +50,8 @@ def test_read_yaml(test_data_dir):
                                    "work_dir": "None",
                                    "batch_size": 1,
                                    "vec": False,
+                                   "yolo": False,
+                                   "coco": False,
                                    "device": "gpu",
                                    "gpu_id": 0
                                    }
@@ -56,12 +59,21 @@ def test_read_yaml(test_data_dir):
 def test_validate_asset_type(test_data_dir):
     local_tiff_path = str(test_data_dir / '0.tif')
     url_image = "http://example.com/test.tiff"
-    invalid_url = "http://example.com/test.jpg"
-    invalid_path = "/path/to/test.tiff"
-    assert validate_asset_type(local_tiff_path) == local_tiff_path
-    assert validate_asset_type(url_image) == url_image
-    assert validate_asset_type(invalid_url) == None
-    assert validate_asset_type(invalid_path) == None
+    invalid_tiff = str(test_data_dir / '0_corrupt.tif')
+    with pytest.raises(ValueError, match="Invalid image_asset type"):
+        validate_asset_type(123)
+    with pytest.raises(ValueError, match="Invalid image_asset URL"):
+        validate_asset_type(url_image)
+    with pytest.raises(ValueError, match="Invalid image_asset file"):
+        validate_asset_type(invalid_tiff)
+    with rasterio.open(local_tiff_path) as dataset:
+        assert validate_asset_type(dataset) == dataset
+    with rasterio.open(local_tiff_path) as dataset:
+        dataset.close()
+        reopened_dataset = validate_asset_type(dataset)
+        assert reopened_dataset.name == dataset.name
+        assert not reopened_dataset.closed
+    assert validate_asset_type(local_tiff_path).name == local_tiff_path
         
 def test_calculate_gpu_stats():
     with patch('torch.cuda.utilization', return_value=50), patch('torch.cuda.mem_get_info', return_value=(500, 1000)):
@@ -121,6 +133,8 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
                       "work_dir": "None",
                       "batch_size": 1,
                       "vec": False,
+                      "yolo": False,
+                      "coco": False,
                       "device": "gpu",
                       "gpu_id": 0
                       }
@@ -128,11 +142,8 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
 def test_cmd_interface_with_image(monkeypatch):
     # Mock the command line arguments
     monkeypatch.setattr('sys.argv', ['prog', '-i', 'image.tif'])
-
-
     # Call the function
     result = cmd_interface()
-
     # Assert the result
     assert result == {
         "image": "image.tif",
@@ -141,6 +152,8 @@ def test_cmd_interface_with_image(monkeypatch):
         "work_dir": None,
         "batch_size": 1,
         "vec": False,
+        "yolo": False,
+        "coco": False,
         "device": "gpu",
         "gpu_id": 0
     }
@@ -148,7 +161,6 @@ def test_cmd_interface_with_image(monkeypatch):
 def test_cmd_interface_no_args(monkeypatch):
     # Mock the command line arguments
     monkeypatch.setattr('sys.argv', ['prog'])
-
     # Call the function and assert that it raises SystemExit
     with pytest.raises(SystemExit):
         cmd_interface()
