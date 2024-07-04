@@ -40,49 +40,43 @@ class RasterDataset(GeoDataset):
         """Initializes a RasterDataset object.
         
         Args:
-            image_asset (str): The path to the image asset.
-            bounding_box (str): The bounding box of the image asset.
+            image_asset (str): The path or rasterio dataset of image asset.
+            bounding_box (str): The bounding box of image asset.
         """
         super().__init__()
-        self.image_asset = validate_asset_type(image_asset)
-        
-        if self.image_asset is None:
-            logger.error(f"image asset is neither a tiff image | tiff url")
-            raise ValueError("Invalid image_asset type")
-        
-        with rio.open(self.image_asset) as src:
-            self.src = src
-            try:
-                self.cmap = src.colormap(1)
-            except ValueError:
-                pass
+        self.src = validate_asset_type(image_asset)
             
-            crs = src.crs
-            res = src.res[0]
-            bands = src.count
-            image_height = src.height
-            image_width = src.width
-            minx, miny, maxx, maxy = src.bounds
-        
-            mint: float = 0
-            maxt: float = sys.maxsize
+        try:
+            self.cmap = self.src.colormap(1)
+        except ValueError:
+            pass
             
-            if bbox is None:
-                bbox = BoundingBox(minx=minx, 
-                                   miny=miny, 
-                                   maxx=maxx, 
-                                   maxy=maxy, 
-                                   mint=mint, maxt=maxt)
-            else:
-                bbox = tuple(map(float, bbox.split(', ')))
-                bbox = BoundingBox(minx=bbox[0], 
-                                   miny=bbox[1], 
-                                   maxx=bbox[2], 
-                                   maxy=bbox[3], 
-                                   mint=mint, maxt=maxt)
-                
-            coords = (minx, maxx, miny, maxy, mint, maxt)
-            self.index.insert(0, coords, self.image_asset)
+        crs = self.src.crs
+        res = self.src.res[0]
+        bands = self.src.count
+        image_height = self.src.height
+        image_width = self.src.width
+        minx, miny, maxx, maxy = self.src.bounds
+    
+        mint: float = 0
+        maxt: float = sys.maxsize
+            
+        if bbox is None:
+            bbox = BoundingBox(minx=minx, 
+                                miny=miny, 
+                                maxx=maxx, 
+                                maxy=maxy, 
+                                mint=mint, maxt=maxt)
+        else:
+            bbox = tuple(map(float, bbox.split(', ')))
+            bbox = BoundingBox(minx=bbox[0], 
+                                miny=bbox[1], 
+                                maxx=bbox[2], 
+                                maxy=bbox[3], 
+                                mint=mint, maxt=maxt)
+            
+        coords = (minx, maxx, miny, maxy, mint, maxt)
+        self.index.insert(0, coords, self.src.name)
         
         self._crs = cast(CRS, crs)
         self.res = cast(float, res)
@@ -131,15 +125,14 @@ class RasterDataset(GeoDataset):
         window = Window.from_slices(slice(y_min, y_min + patch_height),
                                     slice(x_min, x_min + patch_width))
         
-        with rio.open(self.image_asset) as src:
-            dest = src.read(window=window)
-            if dest.dtype == np.uint16:
-                dest = dest.astype(np.int32)
-            elif dest.dtype == np.uint32:
-                dest = dest.astype(np.int64)
+        dest = self.src.read(window=window)
+        if dest.dtype == np.uint16:
+            dest = dest.astype(np.int32)
+        elif dest.dtype == np.uint32:
+            dest = dest.astype(np.int64)
 
-            tensor = torch.tensor(dest)
-            tensor = self.pad_patch(tensor, size)
+        tensor = torch.tensor(dest)
+        tensor = self.pad_patch(tensor, size)
         
         return tensor
     
