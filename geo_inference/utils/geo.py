@@ -9,8 +9,7 @@ import rasterio
 from shapely.wkt import loads
 from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
-from fiona._err import CPLE_OpenFailedError
-from fiona.errors import DriverError
+from pyogrio.errors import DataSourceError
 
 from ..config.logging_config import logger
 
@@ -45,7 +44,7 @@ def gdf_load(gdf):
     if isinstance(gdf, (str, Path)):
         try:
             return gpd.read_file(gdf)
-        except (DriverError, CPLE_OpenFailedError):
+        except DataSourceError as e:
             logger.warning(f"GeoDataFrame couldn't be loaded: either {gdf} isn't a valid"
                            f" path or it isn't a valid vector file. Returning an empty"
                            f" GeoDataFrame.")
