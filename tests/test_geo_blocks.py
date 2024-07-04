@@ -28,7 +28,7 @@ class TestRasterDataset:
 
     def test_getitem(self, raster_dataset):
         query: Dict[str, Any] = {
-            'path': raster_dataset.image_asset,
+            'path': raster_dataset.src.name,
             'window': (0, 0, 10, 10),  # replace with actual window
             'pixel_coords': (0, 0, 10, 10)  # replace with actual pixel_coords
         }
