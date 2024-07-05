@@ -1,7 +1,7 @@
 import logging
 from distutils.version import LooseVersion
 from pathlib import Path
-
+import sys
 import pandas as pd
 import geopandas as gpd
 import pyproj
@@ -12,17 +12,20 @@ from shapely.geometry.base import BaseGeometry
 from fiona._err import CPLE_OpenFailedError
 from fiona.errors import DriverError
 
-from ..config.logging_config import logger
+if str(Path(__file__).parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+from config.logging_config import logger
 
 logger = logging.getLogger(__name__)
 
 """Utility funtions adapted from Solaris: https://github.com/CosmiQ/solaris/blob/main/solaris/utils/core.py"""
 
+
 def rasterio_load(im):
     """Load a rasterio image from a path or a rasterio object.
     Args:
-        im (str or Path or rasterio.DatasetReader): Path to the image or a rasterio object. 
-        
+        im (str or Path or rasterio.DatasetReader): Path to the image or a rasterio object.
+
     Returns:
         rasterio.DatasetReader: rasterio dataset.
     """
@@ -32,6 +35,7 @@ def rasterio_load(im):
         return im
     else:
         raise ValueError("{} is not an accepted image format for rasterio.".format(im))
+
 
 def gdf_load(gdf):
     """Load a GeoDataFrame from a path or a GeoDataFrame object.
@@ -46,19 +50,22 @@ def gdf_load(gdf):
         try:
             return gpd.read_file(gdf)
         except (DriverError, CPLE_OpenFailedError):
-            logger.warning(f"GeoDataFrame couldn't be loaded: either {gdf} isn't a valid"
-                           f" path or it isn't a valid vector file. Returning an empty"
-                           f" GeoDataFrame.")
+            logger.warning(
+                f"GeoDataFrame couldn't be loaded: either {gdf} isn't a valid"
+                f" path or it isn't a valid vector file. Returning an empty"
+                f" GeoDataFrame."
+            )
             return gpd.GeoDataFrame()
     elif isinstance(gdf, gpd.GeoDataFrame):
         return gdf
     else:
         raise ValueError(f"{gdf} is not an accepted GeoDataFrame format.")
 
+
 def df_load(df):
     """Check if `df` is already loaded in, if not, load from file."""
     if isinstance(df, str):
-        if df.lower().endswith('json'):
+        if df.lower().endswith("json"):
             return gdf_load(df)
         else:
             return pd.read_csv(df)
@@ -66,6 +73,7 @@ def df_load(df):
         return df
     else:
         raise ValueError(f"{df} is not an accepted DataFrame format.")
+
 
 def check_geom(geom):
     """Check if a geometry is loaded in.
@@ -79,6 +87,7 @@ def check_geom(geom):
         return loads(geom)
     elif isinstance(geom, list) and len(geom) == 2:  # coordinates
         return Point(geom)
+
 
 def check_crs(input_crs, return_rasterio=False):
     """Check the input CRS and return a pyproj CRS object.

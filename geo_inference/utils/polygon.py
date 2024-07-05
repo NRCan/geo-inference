@@ -1,5 +1,7 @@
-"""Adapted from Solaris: https://github.com/CosmiQ/solaris/tree/main/solaris """
+"""Adapted from Solaris: https://github.com/CosmiQ/solaris/tree/main/solaris"""
 
+import sys
+from pathlib import Path
 import logging
 import json
 import pandas as pd
@@ -9,23 +11,29 @@ import shapely
 from rasterio import features
 from shapely.geometry import shape
 
-from ..config.logging_config import logger
-from .geo import rasterio_load
-from .geo_transforms import geojson_to_px_gdf, df_to_coco_annos, make_coco_image_dict
+if str(Path(__file__).parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+
+from config.logging_config import logger
+from utils.geo import rasterio_load
+from utils.geo_transforms import (
+    geojson_to_px_gdf,
+    df_to_coco_annos,
+    make_coco_image_dict,
+)
 
 logger = logging.getLogger(__name__)
 
-def mask_to_poly_geojson(mask_path,
-                         output_path="", 
-                         min_area=40,
-                         simplify=False,
-                         tolerance=1.):
+
+def mask_to_poly_geojson(
+    mask_path, output_path="", min_area=40, simplify=False, tolerance=1.0
+):
     """Get polygons from an image mask.
 
     Args:
         mask_path : str
             Generated mask path.
-        
+
         output_path : str, optional
             Path to save the output file to. If not provided, no file is saved.
         min_area : int, optional
@@ -45,8 +53,8 @@ def mask_to_poly_geojson(mask_path,
             A GeoDataFrame of polygons.
 
     """
-    
-    with rasterio.open(mask_path, 'r') as src:
+
+    with rasterio.open(mask_path, "r") as src:
         raster = src.read()
         transform = src.transform
         crs = src.crs
@@ -60,16 +68,26 @@ def mask_to_poly_geojson(mask_path,
             polygons.append(shape(polygon).buffer(0.0))
             values.append(value)
 
-    polygon_gdf = gpd.GeoDataFrame({"geometry": polygons, "value": values}, 
-                                   crs=crs.to_wkt())
+    polygon_gdf = gpd.GeoDataFrame(
+        {"geometry": polygons, "value": values}, crs=crs.to_wkt()
+    )
     if simplify:
-        polygon_gdf['geometry'] = polygon_gdf['geometry'].apply(lambda x: x.simplify(tolerance=tolerance))
-    
-    polygon_gdf.to_file(output_path, driver='GeoJSON')
+        polygon_gdf["geometry"] = polygon_gdf["geometry"].apply(
+            lambda x: x.simplify(tolerance=tolerance)
+        )
+
+    polygon_gdf.to_file(output_path, driver="GeoJSON")
     logger.info(f"GeoJSON saved to {output_path}")
 
-def gdf_to_yolo(geojson_path="", mask_path="", output_path="", column='value',
-                im_size=(0, 0), min_overlap=0.66):
+
+def gdf_to_yolo(
+    geojson_path="",
+    mask_path="",
+    output_path="",
+    column="value",
+    im_size=(0, 0),
+    min_overlap=0.66,
+):
     """Convert a geodataframe containing polygons to yolo/yolt format.
 
     Args:
@@ -107,41 +125,52 @@ def gdf_to_yolo(geojson_path="", mask_path="", output_path="", column='value',
     if im_size == (0, 0):
         src = rasterio_load(mask_path)
         im_size = (src.width, src.height)
-            
+
     gdf = gpd.read_file(geojson_path)
 
     [x0, y0, x1, y1] = [0, 0, im_size[0], im_size[1]]
     out_coords = [[x0, y0], [x0, y1], [x1, y1], [x1, y0]]
     points = [shapely.geometry.Point(coord) for coord in out_coords]
     pix_poly = shapely.geometry.Polygon([[p.x, p.y] for p in points])
-    dw = 1. / im_size[0]
-    dh = 1. / im_size[1]
+    dw = 1.0 / im_size[0]
+    dh = 1.0 / im_size[1]
     header = [column, "x", "y", "w", "h"]
     output = output_path
     gdf = geojson_to_px_gdf(gdf, mask_path)
-    gdf['area'] = gdf['geometry'].area
-    gdf['intersection'] = (
-        gdf['geometry'].intersection(pix_poly).area / gdf['area'])
-    gdf = gdf[gdf['area'] != 0]
-    gdf = gdf[gdf['intersection'] >= min_overlap]
+    gdf["area"] = gdf["geometry"].area
+    gdf["intersection"] = gdf["geometry"].intersection(pix_poly).area / gdf["area"]
+    gdf = gdf[gdf["area"] != 0]
+    gdf = gdf[gdf["intersection"] >= min_overlap]
     if not gdf.empty:
-        boxy = gdf['geometry'].bounds
-        boxy['xmid'] = (boxy['minx'] + boxy['maxx']) / 2.0
-        boxy['ymid'] = (boxy['miny'] + boxy['maxy']) / 2.0
-        boxy['w0'] = (boxy['maxx'] - boxy['minx'])
-        boxy['h0'] = (boxy['maxy'] - boxy['miny'])
-        boxy['x'] = boxy['xmid'] * dw
-        boxy['y'] = boxy['ymid'] * dh
-        boxy['w'] = boxy['w0'] * dw
-        boxy['h'] = boxy['h0'] * dh
+        boxy = gdf["geometry"].bounds
+        boxy["xmid"] = (boxy["minx"] + boxy["maxx"]) / 2.0
+        boxy["ymid"] = (boxy["miny"] + boxy["maxy"]) / 2.0
+        boxy["w0"] = boxy["maxx"] - boxy["minx"]
+        boxy["h0"] = boxy["maxy"] - boxy["miny"]
+        boxy["x"] = boxy["xmid"] * dw
+        boxy["y"] = boxy["ymid"] * dh
+        boxy["w"] = boxy["w0"] * dw
+        boxy["h"] = boxy["h0"] * dh
         if not boxy.empty:
             gdf = gdf.join(boxy)
-            gdf.to_csv(path_or_buf=output, sep=' ', columns=header, index=False, header=False)
+            gdf.to_csv(
+                path_or_buf=output, sep=" ", columns=header, index=False, header=False
+            )
             logger.info(f"Yolo file saved to {output}")
 
-def geojson2coco(image_src, label_src, output_path=None, category_attribute="value", score_attribute=None,
-                 preset_categories=None, include_other=True, info_dict=None,
-                 license_dict=None, verbose=0):
+
+def geojson2coco(
+    image_src,
+    label_src,
+    output_path=None,
+    category_attribute="value",
+    score_attribute=None,
+    preset_categories=None,
+    include_other=True,
+    info_dict=None,
+    license_dict=None,
+    verbose=0,
+):
     """Generate COCO-formatted labels from mask and polygon geojson.
 
     Args:
@@ -182,71 +211,78 @@ def geojson2coco(image_src, label_src, output_path=None, category_attribute="val
         dict: A dictionary following the COCO dataset specification. Depending on arguments provided, it may or may
         not include license and info metadata.
     """
-    logger.debug('Loading labels.')
-    label_df = pd.DataFrame({'label_fname': [],
-                             'category_str': [],
-                             'geometry': []})
+    logger.debug("Loading labels.")
+    label_df = pd.DataFrame({"label_fname": [], "category_str": [], "geometry": []})
     curr_gdf = gpd.read_file(label_src)
 
-    curr_gdf['label_fname'] = label_src
-    curr_gdf['image_fname'] = ''
-    curr_gdf['image_id'] = 1
+    curr_gdf["label_fname"] = label_src
+    curr_gdf["image_fname"] = ""
+    curr_gdf["image_id"] = 1
     if category_attribute is None:
-        logger.debug('No category attribute provided. Creating a default "other" category.')
-        curr_gdf['category_str'] = 'other'  # add arbitrary value
-        tmp_category_attribute = 'category_str'
+        logger.debug(
+            'No category attribute provided. Creating a default "other" category.'
+        )
+        curr_gdf["category_str"] = "other"  # add arbitrary value
+        tmp_category_attribute = "category_str"
     else:
         tmp_category_attribute = category_attribute
-   
-    logger.debug('Converting to pixel coordinates.')
+
+    logger.debug("Converting to pixel coordinates.")
     curr_gdf = geojson_to_px_gdf(curr_gdf, image_src)
-    curr_gdf = curr_gdf.rename(columns={tmp_category_attribute: 'category_str'})
+    curr_gdf = curr_gdf.rename(columns={tmp_category_attribute: "category_str"})
     if score_attribute is not None:
-        curr_gdf = curr_gdf[['image_id', 'label_fname', 'category_str', score_attribute, 'geometry']]
+        curr_gdf = curr_gdf[
+            ["image_id", "label_fname", "category_str", score_attribute, "geometry"]
+        ]
     else:
-        curr_gdf = curr_gdf[['image_id', 'label_fname', 'category_str', 'geometry']]
-    label_df = pd.concat([label_df, curr_gdf], axis='index', ignore_index=True, sort=False)
+        curr_gdf = curr_gdf[["image_id", "label_fname", "category_str", "geometry"]]
+    label_df = pd.concat(
+        [label_df, curr_gdf], axis="index", ignore_index=True, sort=False
+    )
 
-    logger.info('Generating COCO-formatted annotations.')
-    coco_dataset = df_to_coco_annos(label_df,
-                                    geom_col='geometry',
-                                    image_id_col='image_id',
-                                    category_col='category_str',
-                                    score_col=score_attribute,
-                                    preset_categories=preset_categories,
-                                    include_other=include_other,
-                                    verbose=verbose)
+    logger.info("Generating COCO-formatted annotations.")
+    coco_dataset = df_to_coco_annos(
+        label_df,
+        geom_col="geometry",
+        image_id_col="image_id",
+        category_col="category_str",
+        score_col=score_attribute,
+        preset_categories=preset_categories,
+        include_other=include_other,
+        verbose=verbose,
+    )
 
-    logger.debug('Generating COCO-formatted image and license records.')
+    logger.debug("Generating COCO-formatted image and license records.")
     if license_dict is not None:
-        logger.debug('Getting license ID.')
+        logger.debug("Getting license ID.")
         if len(license_dict) == 1:
-            logger.debug('Only one license present; assuming it applies to all images.')
+            logger.debug("Only one license present; assuming it applies to all images.")
             license_id = 1
         else:
-            logger.debug('Zero or multiple licenses present. Not trying to match to images.')
+            logger.debug(
+                "Zero or multiple licenses present. Not trying to match to images."
+            )
             license_id = None
-        logger.debug('Adding licenses to dataset.')
+        logger.debug("Adding licenses to dataset.")
         coco_licenses = []
         license_idx = 1
         for license_name, license_url in license_dict.items():
-            coco_licenses.append({'name': license_name,
-                                  'url': license_url,
-                                  'id': license_idx})
+            coco_licenses.append(
+                {"name": license_name, "url": license_url, "id": license_idx}
+            )
             license_idx += 1
-        coco_dataset['licenses'] = coco_licenses
+        coco_dataset["licenses"] = coco_licenses
     else:
-        logger.debug('No license information provided, skipping for image COCO records.')
+        logger.debug(
+            "No license information provided, skipping for image COCO records."
+        )
         license_id = None
     coco_image_records = make_coco_image_dict({image_src: 1}, license_id)
-    coco_dataset['images'] = coco_image_records
+    coco_dataset["images"] = coco_image_records
 
     if info_dict is not None:
-        coco_dataset['info'] = info_dict
+        coco_dataset["info"] = info_dict
 
-    
-    with open(output_path, 'w') as outfile:
+    with open(output_path, "w") as outfile:
         json.dump(coco_dataset, outfile)
     logger.info(f"CocoJson file saved to {output_path}")
-
-
