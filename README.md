@@ -78,7 +78,7 @@ The `GeoInference` class takes the following parameters:
 - `batch_size`: The batch size to use for feature extraction. Default is `4`.
 - `mask_to_vec`: If set to `"True"`, vector data will be created from mask. Default is `"False"`
 - `vec_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
-- `vec_to_coco`: If set to `"True"`, vector data be converted to COCO format. Default is `"False"`
+- `vec_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
 - `device`: The device to use for feature extraction. Can be `"cpu"` or `"gpu"`. Default is `"gpu"`.
 - `gpu_id`: The ID of the GPU to use for feature extraction. Default is `0`.
 
