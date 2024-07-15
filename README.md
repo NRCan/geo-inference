@@ -1,8 +1,5 @@
 # Geo Inference
 
-[![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/)
-
 [![PyPI - Version](https://img.shields.io/pypi/v/geo-inference)](https://pypi.org/project/geo-inference/)
 [![Codecov](https://img.shields.io/codecov/c/github/valhassan/geo-inference)](https://app.codecov.io/github/valhassan/geo-inference)
 [![tests](https://github.com/valhassan/geo-inference/actions/workflows/test.yml/badge.svg)](https://github.com/valhassan/geo-inference/actions/workflows/test.yml)
