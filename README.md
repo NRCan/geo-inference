@@ -1,5 +1,16 @@
 # Geo Inference
 
+[![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/)
+
+[![PyPI - Version](https://img.shields.io/pypi/v/geo-inference)](https://pypi.org/project/geo-inference/)
+[![Codecov](https://img.shields.io/codecov/c/github/valhassan/geo-inference)](https://app.codecov.io/github/valhassan/geo-inference)
+[![tests](https://github.com/valhassan/geo-inference/actions/workflows/test.yml/badge.svg)](https://github.com/valhassan/geo-inference/actions/workflows/test.yml)
+
+
+
+
+
 geo-inference is a Python package designed for feature extraction from geospatial imagery using compatible deep learning models. It provides a convenient way to extract features from large TIFF images and save the output mask as a TIFF file. It also supports converting the output mask to vector format (*file_name.geojson*), YOLO format (*file_name.csv*), and COCO format (*file_name.json*). This package is particularly useful for applications in remote sensing, environmental monitoring, and urban planning.
 
 ## Installation
