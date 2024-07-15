@@ -21,6 +21,10 @@ jobs:
           pip install pytest pytest-cov
       - name: test with pytest
         run: | 
-          pytest --cov=. --cov-report html
+          pytest --cov app ${{ env.CODECOV_ATS_TESTS }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
         
         
