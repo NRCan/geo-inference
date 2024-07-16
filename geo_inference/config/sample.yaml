@@ -1,8 +1,8 @@
 arguments:
   bbox: None                      # "minx, miny, maxx, maxy" 
-  model: ${MODEL_PATH}   # Name of Extraction Model: str
-  work_dir: "/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_deep_learning_results"                 # Working Directory: str
-  data_dir: "/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/deep_learning/geo-deep-learning/tests/data/inference/test.csv"
+  model: ./deep_learning_model/4cls_RGB_5_1_2_3_scripted.pt   # Name of Extraction Model: str
+  work_dir: ./geo_deep_learning_results    # Working Directory: str
+  data_dir: ./deep_learning/geo-deep-learning/tests/data/inference/test.csv
   bands_requested: 'red,green,blue'                  # Batch size
   vec: False                      # Vector Coversion: bool 
   vec: False                      # Vector Conversion: bool 

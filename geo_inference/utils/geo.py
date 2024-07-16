@@ -49,15 +49,17 @@ def gdf_load(gdf):
         try:
             return gpd.read_file(gdf)
         except DataSourceError as e:
-            logger.warning(f"GeoDataFrame couldn't be loaded: either {gdf} isn't a valid"
-                           f" path or it isn't a valid vector file. Returning an empty"
-                           f" GeoDataFrame.")
+            logger.warning(
+                f"GeoDataFrame couldn't be loaded: either {gdf} isn't a valid"
+                f" path or it isn't a valid vector file. Returning an empty"
+                f" GeoDataFrame."
+            )
             return gpd.GeoDataFrame()
     elif isinstance(gdf, gpd.GeoDataFrame):
         return gdf
     else:
         raise ValueError(f"{gdf} is not an accepted GeoDataFrame format.")
-        
+
 
 def df_load(df):
     """Check if `df` is already loaded in, if not, load from file."""

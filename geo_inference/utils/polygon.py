@@ -132,7 +132,6 @@ def gdf_to_yolo(
         logger.error(f"Error reading GeoJSON file: {geojson_path}: {e}")
         return
 
-
     [x0, y0, x1, y1] = [0, 0, im_size[0], im_size[1]]
     out_coords = [[x0, y0], [x0, y1], [x1, y1], [x1, y0]]
     points = [shapely.geometry.Point(coord) for coord in out_coords]
@@ -216,18 +215,16 @@ def geojson2coco(
         dict: A dictionary following the COCO dataset specification. Depending on arguments provided, it may or may
         not include license and info metadata.
     """
-    logger.debug('Loading labels.')
-    label_df = pd.DataFrame({'label_fname': [],
-                             'category_str': [],
-                             'geometry': []})
+    logger.debug("Loading labels.")
+    label_df = pd.DataFrame({"label_fname": [], "category_str": [], "geometry": []})
     try:
         curr_gdf = gpd.read_file(label_src)
     except pyogrio.errors.DataSourceError as e:
         logger.error(f"Error reading GeoJSON file: {label_src}: {e}")
         return
-    curr_gdf['label_fname'] = label_src
-    curr_gdf['image_fname'] = ''
-    curr_gdf['image_id'] = 1
+    curr_gdf["label_fname"] = label_src
+    curr_gdf["image_fname"] = ""
+    curr_gdf["image_id"] = 1
 
     if category_attribute is None:
         logger.debug(

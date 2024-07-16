@@ -323,11 +323,7 @@ def main() -> None:
 
     """
     How to run this script?
-
-        python geo_inference_dask.py --args ./config/sample.yaml \
-                --MODEL_PATH="/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/deep_learning_model/4cls_RGB_5_1_2_3_scripted.pt" \
-                --WORK_DIR="/path/to/your/work_directory" \
-                --DATA_DIR="/path/to/your/data_directory/test.csv" \
+        python /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/geo_inference_dask.py --args /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/config/sample.yaml 
 
     """
 

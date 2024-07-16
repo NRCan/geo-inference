@@ -61,10 +61,14 @@ def validate_asset_type(image_asset: str):
         rasterio.io.DatasetReader: rasterio.io.DatasetReader.
     """
     if isinstance(image_asset, rasterio.io.DatasetReader):
-        return image_asset if not image_asset.closed else rasterio.open(image_asset.name)
-    
+        return (
+            image_asset if not image_asset.closed else rasterio.open(image_asset.name)
+        )
+
     if isinstance(image_asset, str):
-        if urlparse(image_asset).scheme in ('http', 'https') and is_tiff_url(image_asset):
+        if urlparse(image_asset).scheme in ("http", "https") and is_tiff_url(
+            image_asset
+        ):
             try:
                 return rasterio.open(image_asset)
             except rasterio.errors.RasterioIOError as e:
@@ -76,9 +80,12 @@ def validate_asset_type(image_asset: str):
             except rasterio.errors.RasterioIOError as e:
                 logger.error(f"Failed to open file {image_asset}: {e}")
                 raise ValueError(f"Invalid image_asset file: {image_asset}")
-    
-    logger.error("Image asset is neither a valid TIFF image, Rasterio dataset, nor a valid TIFF URL.")
+
+    logger.error(
+        "Image asset is neither a valid TIFF image, Rasterio dataset, nor a valid TIFF URL."
+    )
     raise ValueError("Invalid image_asset type")
+
 
 def calculate_gpu_stats(gpu_id: int = 0):
     """Calculate GPU stats
@@ -120,8 +127,8 @@ def download_file_from_url(url, save_path, access_token=None):
         logger.error(f"An error occurred: {e}")
         raise
 
-def extract_tar_gz(tar_gz_file: str | Path, target_directory: str | Path):
 
+def extract_tar_gz(tar_gz_file: str | Path, target_directory: str | Path):
     """Extracts a tar.gz file to a target directory
     Args:
         tar_gz_file (str or Path): Path to the tar.gz file.
@@ -406,8 +413,8 @@ def cmd_interface(argv=None):
     parser.add_argument("-c", "--classes", nargs=1, help="Inference Classes")
 
     parser.add_argument("-y", "--yolo", nargs=1, help="Yolo Conversion")
-    
-    parser.add_argument("-c", "--coco", nargs=1, help="Coco Conversion")
+
+    # parser.add_argument("-c", "--coco", nargs=1, help="Coco Conversion")
 
     parser.add_argument("-d", "--device", nargs=1, help="CPU or GPU Device")
 
