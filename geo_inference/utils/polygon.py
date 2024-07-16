@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 import logging
 import json
+import pyogrio
 import pandas as pd
 import geopandas as gpd
 import rasterio
@@ -125,8 +126,12 @@ def gdf_to_yolo(
     if im_size == (0, 0):
         src = rasterio_load(mask_path)
         im_size = (src.width, src.height)
+    try:
+        gdf = gpd.read_file(geojson_path)
+    except pyogrio.errors.DataSourceError as e:
+        logger.error(f"Error reading GeoJSON file: {geojson_path}: {e}")
+        return
 
-    gdf = gpd.read_file(geojson_path)
 
     [x0, y0, x1, y1] = [0, 0, im_size[0], im_size[1]]
     out_coords = [[x0, y0], [x0, y1], [x1, y1], [x1, y0]]
@@ -211,13 +216,19 @@ def geojson2coco(
         dict: A dictionary following the COCO dataset specification. Depending on arguments provided, it may or may
         not include license and info metadata.
     """
-    logger.debug("Loading labels.")
-    label_df = pd.DataFrame({"label_fname": [], "category_str": [], "geometry": []})
-    curr_gdf = gpd.read_file(label_src)
+    logger.debug('Loading labels.')
+    label_df = pd.DataFrame({'label_fname': [],
+                             'category_str': [],
+                             'geometry': []})
+    try:
+        curr_gdf = gpd.read_file(label_src)
+    except pyogrio.errors.DataSourceError as e:
+        logger.error(f"Error reading GeoJSON file: {label_src}: {e}")
+        return
+    curr_gdf['label_fname'] = label_src
+    curr_gdf['image_fname'] = ''
+    curr_gdf['image_id'] = 1
 
-    curr_gdf["label_fname"] = label_src
-    curr_gdf["image_fname"] = ""
-    curr_gdf["image_id"] = 1
     if category_attribute is None:
         logger.debug(
             'No category attribute provided. Creating a default "other" category.'

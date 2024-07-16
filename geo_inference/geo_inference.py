@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import torch
+import rasterio as rio
 from torch.utils.data import DataLoader
 from torchgeo.datasets import stack_samples
 from tqdm import tqdm
@@ -42,6 +43,8 @@ class GeoInference:
                  work_dir: str = None,
                  batch_size: int = 1,
                  mask_to_vec: bool = False,
+                 vec_to_yolo: bool = False,
+                 vec_to_coco: bool = False,
                  device: str = "gpu",
                  gpu_id: int = 0):
         self.gpu_id = int(gpu_id)
@@ -52,13 +55,18 @@ class GeoInference:
         model_path: Path = get_model(model_path_or_url=model, 
                                      work_dir=self.work_dir)
         self.mask_to_vec = mask_to_vec
+        self.vec_to_yolo = vec_to_yolo
+        self.vec_to_coco = vec_to_coco
         self.model = torch.jit.load(model_path, map_location=self.device)
         dummy_input = torch.ones((1, 3, 32, 32), device=self.device)
         with torch.no_grad():
             self.classes = self.model(dummy_input).shape[1]
     
     @torch.no_grad() 
-    def __call__(self, tiff_image: str, bbox: str = None, patch_size: int = 512, stride_size: str = None) -> None:
+    def __call__(self, 
+                 tiff_image: str, 
+                 tiff_name: str = None, 
+                 bbox: str = None, patch_size: int = 512, stride_size: str = None) -> None:
         """
         Perform geo inference on geospatial imagery.
 
@@ -72,13 +80,22 @@ class GeoInference:
             None
 
         """
-        mask_path = self.work_dir.joinpath(Path(tiff_image).stem + "_mask.tif")
-        polygons_path = self.work_dir.joinpath(Path(tiff_image).stem + "_polygons.geojson")
-        yolo_csv_path = self.work_dir.joinpath(Path(tiff_image).stem + "_yolo.csv")
-        coco_json_path = self.work_dir.joinpath(Path(tiff_image).stem + "_coco.json")
+        if isinstance(tiff_image, rio.io.DatasetReader):
+            if tiff_name is not None:
+                tiff_id = Path(tiff_name).stem
+            else:
+                logger.error(f"tiff_name is required when tiff_image is a rasterio dataset")
+                raise ValueError("tiff_name is required when tiff_image is a rasterio dataset")
+        else:
+            tiff_id = Path(tiff_image).stem
+        mask_path = self.work_dir.joinpath(tiff_id + "_mask.tif")
+        polygons_path = self.work_dir.joinpath(tiff_id + "_polygons.geojson")
+        yolo_csv_path = self.work_dir.joinpath(tiff_id + "_yolo.csv")
+        coco_json_path = self.work_dir.joinpath(tiff_id + "_coco.json")
         
         dataset = RasterDataset(tiff_image, bbox=bbox)
-        sampler = InferenceSampler(dataset, size=patch_size, stride=patch_size >> 1 if stride_size is None else stride_size, roi=dataset.bbox)
+        sampler = InferenceSampler(dataset, size=patch_size, 
+                                   stride=patch_size >> 1 if stride_size is None else stride_size, roi=dataset.bbox)
         roi_height = sampler.im_height 
         roi_width = sampler.im_width
         h_padded, w_padded = roi_height + patch_size, roi_width + patch_size
@@ -101,9 +118,12 @@ class GeoInference:
         
         if self.mask_to_vec:
             mask_to_poly_geojson(mask_path, polygons_path)
-            gdf_to_yolo(polygons_path, mask_path, yolo_csv_path)
-            geojson2coco(mask_path, polygons_path, coco_json_path)
-            
+            if self.vec_to_yolo:
+                gdf_to_yolo(polygons_path, mask_path, yolo_csv_path)
+            if self.vec_to_coco:
+                geojson2coco(mask_path, polygons_path, coco_json_path)
+        
+        dataset.src.close()    
         end_time = time.time() - start_time
         
         logger.info('Extraction Completed in {:.0f}m {:.0f}s'.format(end_time // 60, end_time % 60))
@@ -114,6 +134,8 @@ def main() -> None:
                                  work_dir=arguments["work_dir"],
                                  batch_size=arguments["batch_size"],
                                  mask_to_vec=arguments["vec"],
+                                 vec_to_yolo=arguments["yolo"],
+                                 vec_to_coco=arguments["coco"],
                                  device=arguments["device"],
                                  gpu_id=arguments["gpu_id"])
     geo_inference(tiff_image=arguments["image"], bbox=arguments["bbox"])

@@ -1,5 +1,13 @@
 # Geo Inference
 
+[![PyPI - Version](https://img.shields.io/pypi/v/geo-inference)](https://pypi.org/project/geo-inference/)
+[![Codecov](https://img.shields.io/codecov/c/github/valhassan/geo-inference)](https://app.codecov.io/github/valhassan/geo-inference)
+[![tests](https://github.com/valhassan/geo-inference/actions/workflows/test.yml/badge.svg)](https://github.com/valhassan/geo-inference/actions/workflows/test.yml)
+
+
+
+
+
 geo-inference is a Python package designed for feature extraction from geospatial imagery using compatible deep learning models. It provides a convenient way to extract features from large TIFF images and save the output mask as a TIFF file. It also supports converting the output mask to vector format (*file_name.geojson*), YOLO format (*file_name.csv*), and COCO format (*file_name.json*). This package is particularly useful for applications in remote sensing, environmental monitoring, and urban planning.
 
 ## Installation
@@ -36,6 +44,8 @@ python geo_inference.py -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v
 - `-wd`, `--work_dir`: Working Directory
 - `-bs`, `--batch_size`: The Batch Size
 - `-v`, `--vec`: Vector Conversion
+- `-y`, `--yolo`: Yolo Conversion
+- `-c`, `--coco`: Coco Conversion
 - `-d`, `--device`: CPU or GPU Device
 - `-id`, `--gpu_id`: GPU ID, Default = 0
 
@@ -54,7 +64,9 @@ geo_inference = GeoInference(
     model="/path/to/segformer_B5.pt",
     work_dir="/path/to/work/dir",
     batch_size=4,
-    mask_to_vec=True,
+    mask_to_vec=False,
+    vec_to_yolo=False,
+    vec_to_coco=False, 
     device="gpu",
     gpu_id=0
 )
@@ -62,8 +74,7 @@ geo_inference = GeoInference(
 # Perform feature extraction on a TIFF image
 image_path = "/path/to/image.tif"
 patch_size = 512
-stride_size = 256
-geo_inference(image_path, patch_size, stride_size)
+geo_inference(tiff_image = image_path, patch_size = patch_size,)
 ```
 
 ## Parameters
@@ -73,7 +84,9 @@ The `GeoInference` class takes the following parameters:
 - `model`: The path or URL to the model file (.pt for PyTorch models) to use for feature extraction.
 - `work_dir`: The path to the working directory. Default is `"~/.cache"`.
 - `batch_size`: The batch size to use for feature extraction. Default is `4`.
-- `mask_to_vec`: If set to `"True"`, vector files will be created. Default is `"False"`
+- `mask_to_vec`: If set to `"True"`, vector data will be created from mask. Default is `"False"`
+- `vec_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
+- `vec_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
 - `device`: The device to use for feature extraction. Can be `"cpu"` or `"gpu"`. Default is `"gpu"`.
 - `gpu_id`: The ID of the GPU to use for feature extraction. Default is `0`.
 
@@ -83,7 +96,8 @@ The `GeoInference` class outputs the following files:
 
 - `mask.tif`: The output mask file in TIFF format.
 - `polygons.geojson`: The output polygon file in GeoJSON format. This file is only generated if the `mask_to_vec` parameter is set to `True`.
-- `yolo.csv`: The output YOLO file in CSV format. This file is only generated if the `mask_to_vec` parameter is set to `True`.
+- `yolo.csv`: The output YOLO file in CSV format. This file is only generated if the `mask_to_vec`, `vec_to_yolo` parameters are set to `True`.
+- `coco.json`: The output COCO file in JSON format. This file is only generated if the `mask_to_vec`, `vec_to_coco` parameters are set to `True`.
 
 Each file contains the extracted features from the input geospatial imagery.
 

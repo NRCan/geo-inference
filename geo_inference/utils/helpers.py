@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tarfile
+import rasterio
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -44,7 +45,7 @@ def is_tiff_url(url: str):
     )
 
 
-def read_yaml(yaml_file_path: str or Path):
+def read_yaml(yaml_file_path: str | Path):
     with open(yaml_file_path, "r") as f:
         config = yaml.safe_load(f.read())
     return config
@@ -54,17 +55,30 @@ def validate_asset_type(image_asset: str):
     """Validate image asset type
 
     Args:
-        image_asset (str): File path or URL to the image asset.
+        image_asset (str): File path, Rasterio Dataset or URL of image asset.
 
     Returns:
-        str: file path or url.
+        rasterio.io.DatasetReader: rasterio.io.DatasetReader.
     """
-    if os.path.isfile(image_asset) and is_tiff_path(image_asset):
-        return image_asset
-    elif urlparse(image_asset).scheme in ("http", "https") and is_tiff_url(image_asset):
-        return image_asset
-    return None
-
+    if isinstance(image_asset, rasterio.io.DatasetReader):
+        return image_asset if not image_asset.closed else rasterio.open(image_asset.name)
+    
+    if isinstance(image_asset, str):
+        if urlparse(image_asset).scheme in ('http', 'https') and is_tiff_url(image_asset):
+            try:
+                return rasterio.open(image_asset)
+            except rasterio.errors.RasterioIOError as e:
+                logger.error(f"Failed to open URL {image_asset}: {e}")
+                raise ValueError(f"Invalid image_asset URL: {image_asset}")
+        if os.path.isfile(image_asset) and is_tiff_path(image_asset):
+            try:
+                return rasterio.open(image_asset)
+            except rasterio.errors.RasterioIOError as e:
+                logger.error(f"Failed to open file {image_asset}: {e}")
+                raise ValueError(f"Invalid image_asset file: {image_asset}")
+    
+    logger.error("Image asset is neither a valid TIFF image, Rasterio dataset, nor a valid TIFF URL.")
+    raise ValueError("Invalid image_asset type")
 
 def calculate_gpu_stats(gpu_id: int = 0):
     """Calculate GPU stats
@@ -106,8 +120,8 @@ def download_file_from_url(url, save_path, access_token=None):
         logger.error(f"An error occurred: {e}")
         raise
 
+def extract_tar_gz(tar_gz_file: str | Path, target_directory: str | Path):
 
-def extract_tar_gz(tar_gz_file: str or Path, target_directory: str or Path):
     """Extracts a tar.gz file to a target directory
     Args:
         tar_gz_file (str or Path): Path to the tar.gz file.
@@ -391,6 +405,10 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-c", "--classes", nargs=1, help="Inference Classes")
 
+    parser.add_argument("-y", "--yolo", nargs=1, help="Yolo Conversion")
+    
+    parser.add_argument("-c", "--coco", nargs=1, help="Coco Conversion")
+
     parser.add_argument("-d", "--device", nargs=1, help="CPU or GPU Device")
 
     parser.add_argument("-id", "--gpu_id", nargs=1, help="GPU ID, Default = 0")
@@ -405,6 +423,8 @@ def cmd_interface(argv=None):
         data_dir = config["arguments"]["data_dir"]
         bands_requested = config["arguments"]["bands_requested"]
         vec = config["arguments"]["vec"]
+        yolo = config["arguments"]["yolo"]
+        coco = config["arguments"]["coco"]
         device = config["arguments"]["device"]
         gpu_id = config["arguments"]["gpu_id"]
         multi_gpu = config["arguments"]["mgpu"]
@@ -422,12 +442,13 @@ def cmd_interface(argv=None):
         bands_requested = args.bands_requested[0] if args.bands_requested else None
         vec = args.vec[0] if args.vec else False
         multi_gpu = args.mgpu[0] if args.mgpu else False
+        yolo = args.yolo[0] if args.yolo else False
+        coco = args.coco[0] if args.coco else False
         device = args.device[0] if args.device else "gpu"
         gpu_id = args.gpu_id[0] if args.gpu_id else 0
     else:
         print("use the help [-h] option for correct usage")
         raise SystemExit
-
     arguments = {
         "classes": classes,
         "bbox": bbox,
