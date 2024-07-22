@@ -129,19 +129,12 @@ class GeoInferenceDask:
         )
         process = psutil.Process()  # For cpu tracking
         start_time = time.time()
+        base_shape = 5000
         with daskclient(cluster, timeout="60s") as client:
             try:
                 if len(parsed_bands) == 1:
                     aoi_dask_array = dask_imread(list(parsed_bands.values())[0])
-                    aoi_dask_array = da.transpose(
-                        da.squeeze(aoi_dask_array), (2, 0, 1)
-                    ).rechunk(
-                        (
-                            1,
-                            int(chunk_size / stride_size),
-                            int(chunk_size / stride_size),
-                        )
-                    )
+                    aoi_dask_array = da.transpose(da.squeeze(aoi_dask_array), (2, 0, 1))
                 else:
                     aoi_dask_array = [
                         dask_imread_modified(url) for band, url in parsed_bands.items()
@@ -149,13 +142,53 @@ class GeoInferenceDask:
                     aoi_dask_array = da.stack(aoi_dask_array, axis=0)
                     aoi_dask_array = da.squeeze(
                         da.transpose(aoi_dask_array, (1, 0, 2, 3))
-                    ).rechunk(
-                        (
-                            1,
-                            int(chunk_size / stride_size),
-                            int(chunk_size / stride_size),
-                        )
                     )
+
+                x_chunk = aoi.chunk_size
+                y_chunk = aoi.chunk_size
+                if aoi_dask_array.shape[1] <= base_shape:
+                    y_chunk = int(aoi_dask_array.shape[1] / 2)
+                elif (
+                    aoi_dask_array.shape[1] <= base_shape * 3
+                    and aoi_dask_array.shape[1] > base_shape
+                ):
+                    y_chunk = int(aoi_dask_array.shape[1] / 4)
+                elif (
+                    aoi_dask_array.shape[1] <= base_shape * 6
+                    and aoi_dask_array.shape[1] > base_shape * 3
+                ):
+                    y_chunk = int(aoi_dask_array.shape[1] / 6)
+                elif (
+                    aoi_dask_array.shape[1] < base_shape * 8
+                    and aoi_dask_array.shape[1] > base_shape * 6
+                ):
+                    y_chunk = int(aoi_dask_array.shape[1] / 15)
+
+                if aoi_dask_array.shape[2] <= base_shape:
+                    x_chunk = int(aoi_dask_array.shape[1] / 2)
+                elif (
+                    aoi_dask_array.shape[2] <= base_shape * 3
+                    and aoi_dask_array.shape[2] > base_shape
+                ):
+                    x_chunk = int(aoi_dask_array.shape[2] / 4)
+                elif (
+                    aoi_dask_array.shape[2] <= base_shape * 6
+                    and aoi_dask_array.shape[2] > base_shape * 3
+                ):
+                    x_chunk = int(aoi_dask_array.shape[2] / 12)
+                elif (
+                    aoi_dask_array.shape[2] < base_shape * 8
+                    and aoi_dask_array.shape[2] > base_shape * 6
+                ):
+                    x_chunk = int(aoi_dask_array.shape[2] / 20)
+
+                aoi_dask_array = aoi_dask_array.rechunk(
+                    (
+                        1,
+                        y_chunk,
+                        x_chunk,
+                    )
+                )
                 logger.info(
                     "The dashboard link for dask cluster is at "
                     f"{client.dashboard_link}"
@@ -184,8 +217,8 @@ class GeoInferenceDask:
                         aoi_dask_array,
                         clip_limit=enhance_clip_limit,
                         depth={
-                            1: int(chunk_size / stride_size),
-                            2: int(chunk_size / stride_size),
+                            1: y_chunk,
+                            2: x_chunk,
                         },
                         trim=True,
                         boundary="reflect",
@@ -241,7 +274,6 @@ class GeoInferenceDask:
                     "The dask array to be fed to sum_overlapped_chunks is \n"
                     f"{aoi_dask_array}"
                 )
-
                 aoi_dask_array = da.map_overlap(
                     sum_overlapped_chunks,
                     aoi_dask_array,
@@ -278,6 +310,7 @@ class GeoInferenceDask:
                 logger.info(
                     f"The total time of running Inference is {int(hours)}:{int(minutes)}:{seconds:.2f} \n"
                 )
+
                 # Print Performance results
                 torch.cuda.synchronize()
                 logger.info(
