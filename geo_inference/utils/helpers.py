@@ -400,21 +400,29 @@ def cmd_interface(argv=None):
         help="bands_requested in this format'R,G,B'",
     )
 
+    parser.add_argument(
+        "-im", "--image", nargs=1, help="Path or URL to the input image"
+    )
+
     parser.add_argument("-m", "--model", nargs=1, help="Path or URL to the model file")
 
     parser.add_argument("-wd", "--work_dir", nargs=1, help="Working Directory")
 
-    parser.add_argument("-bs", "--batch_size", nargs=1, help="The Batch Size")
+    parser.add_argument("-p", "--patch_size", nargs=1, help="The Patch Size")
+
+    parser.add_argument(
+        "-ss", "--stride_size", nargs=1, help="The stride size for overlaps"
+    )
 
     parser.add_argument("-v", "--vec", nargs=1, help="Vector Conversion")
 
     parser.add_argument("-mg", "--mgpu", nargs=1, help="Multi GPU")
 
-    parser.add_argument("-c", "--classes", nargs=1, help="Inference Classes")
+    parser.add_argument("-cls", "--classes", nargs=1, help="Inference Classes")
 
     parser.add_argument("-y", "--yolo", nargs=1, help="Yolo Conversion")
 
-    # parser.add_argument("-c", "--coco", nargs=1, help="Coco Conversion")
+    parser.add_argument("-c", "--coco", nargs=1, help="Coco Conversion")
 
     parser.add_argument("-d", "--device", nargs=1, help="CPU or GPU Device")
 
@@ -424,10 +432,10 @@ def cmd_interface(argv=None):
 
     if args.args:
         config = read_yaml(args.args[0])
-        bbox = config["arguments"]["bbox"]
+        image = config["arguments"]["image"]
         model = config["arguments"]["model"]
+        bbox = config["arguments"]["bbox"]
         work_dir = config["arguments"]["work_dir"]
-        data_dir = config["arguments"]["data_dir"]
         bands_requested = config["arguments"]["bands_requested"]
         vec = config["arguments"]["vec"]
         yolo = config["arguments"]["yolo"]
@@ -436,9 +444,8 @@ def cmd_interface(argv=None):
         gpu_id = config["arguments"]["gpu_id"]
         multi_gpu = config["arguments"]["mgpu"]
         classes = config["arguments"]["classes"]
-        memory_limit = config["arguments"]["memory_limit"]
         n_workers = config["arguments"]["n_workers"]
-        chunk_size = config["arguments"]["chunk_size"]
+        patch_size = config["arguments"]["patch_size"]
     elif args.data_dir:
         """Not finished"""
         classes = args.classes[0] if args.classes else 5
@@ -457,19 +464,20 @@ def cmd_interface(argv=None):
         print("use the help [-h] option for correct usage")
         raise SystemExit
     arguments = {
+        "model": model,
+        "image": image,
+        "bands_requested": bands_requested,
+        "work_dir": work_dir,
         "classes": classes,
         "bbox": bbox,
-        "model": model,
-        "work_dir": work_dir,
-        "data_dir": data_dir,
-        "bands_requested": bands_requested,
         "multi_gpu": multi_gpu,
         "vec": vec,
+        "yolo": yolo,
+        "coco": coco,
         "device": device,
         "gpu_id": gpu_id,
-        "memory_limit": memory_limit,
         "n_workers": n_workers,
-        "chunk_size": chunk_size,
+        "patch_size": patch_size,
     }
     return arguments
 

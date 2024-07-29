@@ -796,7 +796,7 @@ def sum_overlapped_chunks(
                 summed_aoi_chunk = np.divide(
                     full_array[:-1, :, :],
                     full_array[-1, :, :][np.newaxis, :, :],
-                    out=np.zeros_like(full_array[:-1, :, :], dtype=float),
+                    out=full_array[:-1, :, :],
                     where=full_array[-1, :, :] != 0,
                 )
                 if summed_aoi_chunk.shape[0] == 1:

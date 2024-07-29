@@ -103,7 +103,7 @@ Each file contains the extracted features from the input geospatial imagery.
 
 ## License
 
-Geo Inference is released under the MIT License. See `LICENSE` for more information.
+Geo Inference is released under the MIT License. See [`LICENSE`](https://github.com/NRCan/geo-inference/blob/main/LICENSE) for more information.
 
 ## Contact
 
