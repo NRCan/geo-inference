@@ -305,7 +305,7 @@ def main() -> None:
 
     """
     How to run this script?
-        python /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/geo_inference_dask_copy.py --args /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/config/sample.yaml 
+        python /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/geo_inference_dask.py --args /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/config/sample.yaml 
 
     """
 

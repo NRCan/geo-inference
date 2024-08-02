@@ -1,5 +1,5 @@
 arguments:
-  image: "/gpfs/fs5/nrcan/nrcan_geobase/work/transfer/work/deep_learning/operationalization/data/QC19-052908568040_01_P001-WV02_red-green-blue_clahe25.tif"
+  image: "/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference_big_enhancement/NS2-058651012010_01_P001-WV02-R-G-B_clahe25.tif"
   model: ./deep_learning_model/4cls_RGB_5_1_2_3_scripted.pt   # Name of Extraction Model: str
   bbox: None                      # "minx, miny, maxx, maxy" 
   work_dir: ./geo_inference_big_enhancement   # Working Directory: str
