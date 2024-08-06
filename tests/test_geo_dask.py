@@ -368,9 +368,8 @@ class TestModelInference:
         )
 
         # Patch torch.jit.load to return the mock_model
-
         # Call the function under test
-        output = code.run_model_inference(
+        output = code.runModel(
             chunk_data, 4, model_path, False, 0, 3, mock_block_info_left_edge
         )
         print(output)

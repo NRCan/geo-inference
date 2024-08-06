@@ -11,8 +11,6 @@ from urllib.parse import urlparse
 import requests
 import torch
 import yaml
-import tracemalloc
-import linecache
 
 import csv
 from tqdm import tqdm
@@ -102,32 +100,6 @@ def calculate_gpu_stats(gpu_id: int = 0):
     return res, mem
 
 
-def download_file_from_url(url, save_path, access_token=None):
-    """Download a file from a URL
-
-    Args:
-        url (str): URL to the file.
-        save_path (str or Path): Path to save the file.
-        access_token (str, optional): Access token. Defaults to None.
-    """
-    try:
-        headers = {}
-        headers["Authorization"] = f"Bearer {access_token}"
-        response = requests.get(url, headers=headers, stream=True)
-        if response.status_code == 200:
-            with open(save_path, "wb") as file:
-                for chunk in response.iter_content(chunk_size=128):
-                    file.write(chunk)
-            logger.info(f"Downloaded {save_path}")
-        else:
-            logger.error(
-                f"Failed to download the file from {url}. Status code: {response.status_code}"
-            )
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-        raise
-
-
 def extract_tar_gz(tar_gz_file: str | Path, target_directory: str | Path):
     """Extracts a tar.gz file to a target directory
     Args:
@@ -200,10 +172,9 @@ def get_device(
         logger.error("Invalid device type requested: {device}")
         raise ValueError("Invalid device type")
 
-
 def get_directory(work_directory: str) -> Path:
-    """Returns a working directory
-
+    """
+    Returns a working directory
     Args:
         work_directory (str): User's specified path
 
@@ -250,32 +221,72 @@ def get_model(model_path_or_url: str, work_dir: Path) -> Path:
             raise ValueError("Invalid model path")
 
 
-def display_top_memory(snapshot, key_type="lineno", limit=10):
-    snapshot = snapshot.filter_traces(
-        (
-            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-            tracemalloc.Filter(False, "<unknown>"),
-        )
+def select_model_device(gpu_id: int, multi_gpu: bool):
+    
+    device = "cpu"
+    if torch.cuda.is_available():
+        if not multi_gpu:
+            res = {"gpu": torch.cuda.utilization(gpu_id)}
+            torch_cuda_mem = torch.cuda.mem_get_info(gpu_id)
+            mem = {
+                "used": torch_cuda_mem[-1] - torch_cuda_mem[0],
+                "total": torch_cuda_mem[-1],
+            }
+            used_ram = mem["used"] / (1024**2)
+            max_ram = mem["total"] / (1024**2)
+            used_ram_percentage = (used_ram / max_ram) * 100
+            if used_ram_percentage < 70 and res["gpu"] < 70:
+                device = f"cuda:{gpu_id}"
+        else:
+            num_devices = torch.cuda.device_count()
+            for i in range(num_devices):
+                res = {"gpu": torch.cuda.utilization(i)}
+                torch_cuda_mem = torch.cuda.mem_get_info(i)
+                mem = {
+                    "used": torch_cuda_mem[-1] - torch_cuda_mem[0],
+                    "total": torch_cuda_mem[-1],
+                }
+                used_ram = mem["used"] / (1024**2)
+                max_ram = mem["total"] / (1024**2)
+                used_ram_percentage = (used_ram / max_ram) * 100
+                if used_ram_percentage < 70 and res["gpu"] < 70:
+                    device = f"cuda:{i}"
+                    break
+    return device
+
+
+def write_inference_to_tiff(
+    raster_meta,
+    mask_image: np.ndarray,
+    mask_path: pathlib.Path,
+):
+    """
+    Save mask to file.
+    Args:
+        raster_meta : The meta data of the input raster.
+        mask_image (np.ndarray): The output mask.
+        mask_path (pathlib.Path) : The path to save the mask.
+    Returns:
+        None
+    """
+    mask_image = mask_image[np.newaxis, : mask_image.shape[0], : mask_image.shape[1]]
+    raster_meta.update(
+        {
+            "driver": "GTiff",
+            "height": mask_image.shape[1],
+            "width": mask_image.shape[2],
+            "count": mask_image.shape[0],
+            "dtype": "uint8",
+            "compress": "lzw",
+        }
     )
-    top_stats = snapshot.statistics(key_type)
-
-    print("Top %s lines" % limit)
-    for index, stat in enumerate(top_stats[:limit], 1):
-        frame = stat.traceback[0]
-        print(
-            "#%s: %s:%s: %.1f KiB"
-            % (index, frame.filename, frame.lineno, stat.size / 1024)
-        )
-        line = linecache.getline(frame.filename, frame.lineno).strip()
-        if line:
-            print("    %s" % line)
-
-    other = top_stats[limit:]
-    if other:
-        size = sum(stat.size for stat in other)
-        print("%s other: %.1f KiB" % (len(other), size / 1024))
-    total = sum(stat.size for stat in top_stats)
-    print("Total allocated size: %.1f KiB" % (total / 1024))
+    with rasterio.open(
+        mask_path,
+        "w+",
+        **raster_meta,
+    ) as dest:
+        dest.write(mask_image)
+    logger.info(f"Mask saved to {mask_path}")
 
 
 def get_tiff_paths_from_csv(
@@ -307,6 +318,37 @@ def get_tiff_paths_from_csv(
                     f"{e}" f"Failed to get the path of :\n{aoi_dict}\n" f"Index: {i}"
                 )
     return aois_dictionary
+
+
+def asset_by_common_name(raster_raw_input) -> Dict:
+    """
+    Get assets by common band name (only works for assets containing 1 band)
+    Adapted from:
+    https://github.com/sat-utils/sat-stac/blob/40e60f225ac3ed9d89b45fe564c8c5f33fdee7e8/satstac/item.py#L75
+    @return:
+    """
+    _assets_by_common_name = OrderedDict()
+    item = pystac.Item.from_file(raster_raw_input)
+    for name, a_meta in item.assets.items():
+        bands = []
+        if "eo:bands" in a_meta.extra_fields.keys():
+            bands = a_meta.extra_fields["eo:bands"]
+        if len(bands) == 1:
+            eo_band = bands[0]
+            if "common_name" in eo_band.keys():
+                common_name = eo_band["common_name"]
+                if not Band.band_range(common_name):
+                    raise ValueError(
+                        f'Must be one of the accepted common names. Got "{common_name}".'
+                    )
+                else:
+                    _assets_by_common_name[common_name] = {
+                        "meta": a_meta,
+                        "name": name,
+                    }
+    if not _assets_by_common_name:
+        raise ValueError("Common names for assets cannot be retrieved")
+    return _assets_by_common_name
 
 
 def read_csv(csv_file_name: str) -> Dict:

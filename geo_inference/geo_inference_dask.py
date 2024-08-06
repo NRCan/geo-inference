@@ -18,17 +18,13 @@ from omegaconf import ListConfig  # type: ignore
 if str(Path(__file__).parents[0]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).parents[0]))
 
-from utils.helpers import cmd_interface, get_directory, get_model
+from utils.helpers import cmd_interface, get_directory, get_model, write_inference_to_tiff, select_model_device, asset_by_common_name
 from geo_dask import (
     dask_imread_modified,
-    runModel_partial_neighbor,
+    runModel,
     sum_overlapped_chunks,
-    write_inference_to_tiff,
-    asset_by_common_name,
-    select_model_device,
 )
 from utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
-
 logger = logging.getLogger(__name__)
 
 
@@ -55,6 +51,7 @@ class GeoInferenceDask:
         mask_to_coco (bool): Whether to convert the output mask to coco format.
         mask_to_yolo (bool): Whether to convert the output mask to yolo format.
         classes (int): The number of classes in the output of the model.
+        raster_meta : The metadata of the input raster.
 
     """
 
@@ -93,25 +90,24 @@ class GeoInferenceDask:
         inference_input: Union[Path, str],
         bands_requested: List[str],
         patch_size: int = 1024,
-        num_workers: int = 16,
+        num_workers: int = 8,
         bbox: str = None,
     ) -> None:
+        
         """
-
         Perform geo inference on geospatial imagery using dask array.
 
         Args:
             inference_input Union[Path, str]: The path/url to the geospatial image to perform inference on.
             bands_requested List[str]: The requested bands to consider for the inference.
             patch_size (int): The size of the patches to use for inference.
-            n_workers (int) : The number of available cores for running the inference in parallel.
+            num_workers (int) : The number of available cores for running the inference in parallel.
             bbox (str): The bbox or extent of the image in this format "minx, miny, maxx, maxy".
 
         Returns:
             None
 
         """
-        logging.getLogger("rasterio").setLevel(logging.ERROR)
 
         if not isinstance(inference_input, (str, Path)):
             raise TypeError(
@@ -132,6 +128,7 @@ class GeoInferenceDask:
             if isinstance(inference_input, str)
             else inference_input
         )
+        # it takes care of urls
         prefix_base_name = (
             base_name if not base_name.endswith(".tif") else base_name[:-4]
         )
@@ -229,7 +226,7 @@ class GeoInferenceDask:
 
             # run the model
             mask_array = data.map_overlap(
-                runModel_partial_neighbor,
+                runModel,
                 model=self.model,
                 patch_size=patch_size,
                 device=self.device,
@@ -308,7 +305,6 @@ def main() -> None:
         python /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/geo_inference_dask.py --args /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/config/sample.yaml 
 
     """
-
 
 if __name__ == "__main__":
     main()

@@ -23,36 +23,6 @@ if str(Path(__file__).parents[0]) not in sys.path:
 logger = logging.getLogger(__name__)
 
 
-def asset_by_common_name(raster_raw_input) -> Dict:
-    """
-    Get assets by common band name (only works for assets containing 1 band)
-    Adapted from:
-    https://github.com/sat-utils/sat-stac/blob/40e60f225ac3ed9d89b45fe564c8c5f33fdee7e8/satstac/item.py#L75
-    @return:
-    """
-    _assets_by_common_name = OrderedDict()
-    item = pystac.Item.from_file(raster_raw_input)
-    for name, a_meta in item.assets.items():
-        bands = []
-        if "eo:bands" in a_meta.extra_fields.keys():
-            bands = a_meta.extra_fields["eo:bands"]
-        if len(bands) == 1:
-            eo_band = bands[0]
-            if "common_name" in eo_band.keys():
-                common_name = eo_band["common_name"]
-                if not Band.band_range(common_name):
-                    raise ValueError(
-                        f'Must be one of the accepted common names. Got "{common_name}".'
-                    )
-                else:
-                    _assets_by_common_name[common_name] = {
-                        "meta": a_meta,
-                        "name": name,
-                    }
-    if not _assets_by_common_name:
-        raise ValueError("Common names for assets cannot be retrieved")
-    return _assets_by_common_name
-
 
 def dask_imread_modified(
     fname,
@@ -80,7 +50,7 @@ def dask_imread_modified(
     return a
 
 
-def runModel_partial_neighbor(
+def runModel(
     chunk_data: np.ndarray,
     model,
     patch_size: int,
@@ -89,13 +59,15 @@ def runModel_partial_neighbor(
     block_info=None,
 ):
     """
-    #update
-    This function is for running the model on partial neighbor --> The right and bottom neighbors
-    After running the model, depending on the location of chuck, it multiplies the chunk with a window and adds the windows to another dimension of the chunk
-    This window is used to deal with edge artifact
+    This function is for running the model on partial neighbor (The right and bottom neighbors).
+    After running the model, depending on the location of chuck, it multiplies the chunk with a window and adds the windows to another dimension of the chunk and returns it.
+    This window is used for edge artifact.
     @param chunk_data: np.ndarray, this is a chunk of data in dask array
             chunk_size: int, the size of chunk data that we want to feed the model with
-            model: the path to the scripted model
+            model: ScrptedModel, the scripted model.
+            patch_size: int , the size of each patch on which the model should be run.
+            device : str, the torch device; either cpu or gpu.
+            num_classes: int, the number of classes that model work with.
             block_info: none, this is having all the info about the chunk relative to the whole data (dask array)
     @return: predited chunks
     """
@@ -233,6 +205,7 @@ def runModel_partial_neighbor(
                 chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2
             ):
                 final_window = window
+            
             tensor = torch.as_tensor(chunk_data[np.newaxis, ...]).to(
                 torch.device(device)
             )
@@ -264,6 +237,15 @@ def sum_overlapped_chunks(
     chunk_size: int,
     block_info=None,
 ):
+    """
+    This function is for summing up the overlapped parts of the patches in order to reduce the edge artifact.
+    After running the model, we run this function on neighbor chunks.
+    @param aoi_chunk: np.ndarray, this is a chunk of data in dask array.
+            aoi_chunk: int, the size of chunk data that we want to feed the model with
+            chunk_size: int , the size of each patch on which the model should be run.
+            block_info: none, this is having all the info about the chunk relative to the whole data (dask array)
+    @return: reday-to-save chunks
+    """
     if aoi_chunk.size > 0 and aoi_chunk is not None:
         num_chunks = block_info[0]["num-chunks"]
         chunk_location = block_info[0]["chunk-location"]
@@ -362,70 +344,3 @@ def sum_overlapped_chunks(
                     final_result = np.argmax(final_result, axis=0).astype(np.uint8)
                 return final_result
 
-
-def write_inference_to_tiff(
-    raster_meta,
-    mask_image: np.ndarray,
-    mask_path: pathlib.Path,
-):
-    """
-    # update
-    Save mask to file.
-    Args:
-        raster_reader (DatasetReader) : The rasterio object.
-        mask_image (np.ndarray): The output mask.
-        mask_path (pathlib.Path) : The path to save the mask.
-    Returns:
-        None
-    """
-    mask_image = mask_image[np.newaxis, : mask_image.shape[0], : mask_image.shape[1]]
-    raster_meta.update(
-        {
-            "driver": "GTiff",
-            "height": mask_image.shape[1],
-            "width": mask_image.shape[2],
-            "count": mask_image.shape[0],
-            "dtype": "uint8",
-            "compress": "lzw",
-        }
-    )
-    with rasterio.open(
-        mask_path,
-        "w+",
-        **raster_meta,
-    ) as dest:
-        dest.write(mask_image)
-    logger.info(f"Mask saved to {mask_path}")
-
-
-def select_model_device(gpu_id: int, multi_gpu: bool):
-    device = "cpu"
-    if torch.cuda.is_available():
-        if not multi_gpu:
-            res = {"gpu": torch.cuda.utilization(gpu_id)}
-            torch_cuda_mem = torch.cuda.mem_get_info(gpu_id)
-            mem = {
-                "used": torch_cuda_mem[-1] - torch_cuda_mem[0],
-                "total": torch_cuda_mem[-1],
-            }
-            used_ram = mem["used"] / (1024**2)
-            max_ram = mem["total"] / (1024**2)
-            used_ram_percentage = (used_ram / max_ram) * 100
-            if used_ram_percentage < 70 and res["gpu"] < 70:
-                device = f"cuda:{gpu_id}"
-        else:
-            num_devices = torch.cuda.device_count()
-            for i in range(num_devices):
-                res = {"gpu": torch.cuda.utilization(i)}
-                torch_cuda_mem = torch.cuda.mem_get_info(i)
-                mem = {
-                    "used": torch_cuda_mem[-1] - torch_cuda_mem[0],
-                    "total": torch_cuda_mem[-1],
-                }
-                used_ram = mem["used"] / (1024**2)
-                max_ram = mem["total"] / (1024**2)
-                used_ram_percentage = (used_ram / max_ram) * 100
-                if used_ram_percentage < 70 and res["gpu"] < 70:
-                    device = f"cuda:{i}"
-                    break
-    return device
