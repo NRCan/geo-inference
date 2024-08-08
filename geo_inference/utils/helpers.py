@@ -7,7 +7,7 @@ import tarfile
 import rasterio
 from pathlib import Path
 from urllib.parse import urlparse
-
+import numpy as np
 import requests
 import torch
 import yaml
@@ -172,6 +172,7 @@ def get_device(
         logger.error("Invalid device type requested: {device}")
         raise ValueError("Invalid device type")
 
+
 def get_directory(work_directory: str) -> Path:
     """
     Returns a working directory
@@ -222,7 +223,6 @@ def get_model(model_path_or_url: str, work_dir: Path) -> Path:
 
 
 def select_model_device(gpu_id: int, multi_gpu: bool):
-    
     device = "cpu"
     if torch.cuda.is_available():
         if not multi_gpu:
@@ -258,7 +258,7 @@ def select_model_device(gpu_id: int, multi_gpu: bool):
 def write_inference_to_tiff(
     raster_meta,
     mask_image: np.ndarray,
-    mask_path: pathlib.Path,
+    mask_path: Path,
 ):
     """
     Save mask to file.

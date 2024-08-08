@@ -23,7 +23,6 @@ if str(Path(__file__).parents[0]) not in sys.path:
 logger = logging.getLogger(__name__)
 
 
-
 def dask_imread_modified(
     fname,
     nframes=1,
@@ -80,6 +79,7 @@ def runModel(
             window = w.hann(M=patch_size, sym=False)
             window = window[:, np.newaxis] * window[np.newaxis, :]
             final_window = np.empty((1, 1))
+
             if chunk_location[2] >= num_chunks[2] - 2 and chunk_location[1] == 0:
                 window_u = np.vstack(
                     [
@@ -205,7 +205,7 @@ def runModel(
                 chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2
             ):
                 final_window = window
-            
+
             tensor = torch.as_tensor(chunk_data[np.newaxis, ...]).to(
                 torch.device(device)
             )
@@ -215,7 +215,6 @@ def runModel(
             with torch.no_grad():
                 out = model(tensor).cpu().numpy()[0]
             del tensor
-
             if out.shape[1:] == final_window.shape and out.shape[1:] == (
                 patch_size,
                 patch_size,
@@ -343,4 +342,3 @@ def sum_overlapped_chunks(
                 else:
                     final_result = np.argmax(final_result, axis=0).astype(np.uint8)
                 return final_result
-

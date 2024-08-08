@@ -18,13 +18,21 @@ from omegaconf import ListConfig  # type: ignore
 if str(Path(__file__).parents[0]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).parents[0]))
 
-from utils.helpers import cmd_interface, get_directory, get_model, write_inference_to_tiff, select_model_device, asset_by_common_name
+from utils.helpers import (
+    cmd_interface,
+    get_directory,
+    get_model,
+    write_inference_to_tiff,
+    select_model_device,
+    asset_by_common_name,
+)
 from geo_dask import (
     dask_imread_modified,
     runModel,
     sum_overlapped_chunks,
 )
 from utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,7 +101,6 @@ class GeoInferenceDask:
         num_workers: int = 8,
         bbox: str = None,
     ) -> None:
-        
         """
         Perform geo inference on geospatial imagery using dask array.
 
@@ -305,6 +312,7 @@ def main() -> None:
         python /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/geo_inference_dask.py --args /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/config/sample.yaml 
 
     """
+
 
 if __name__ == "__main__":
     main()
