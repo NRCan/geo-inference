@@ -206,7 +206,7 @@ def get_model(model_path_or_url: str, work_dir: Path) -> Path:
         Path: Path to the model file.
     """
     parsed_string = urlparse(model_path_or_url)
-    if parsed_string.scheme:
+    if parsed_string.scheme and not os.path.exists(model_path_or_url):
         model_url = model_path_or_url
         model_name = os.path.basename(parsed_string.path)
         cached_file = work_dir.joinpath(model_name)

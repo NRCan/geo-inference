@@ -32,11 +32,11 @@ expects an input image with the same features. An example notebook for how the p
 
 **Command line**
 ```bash
-python geo_inference.py -a <args>
+python geo_inference -a <args>
 ```
 - `-a`, `--args`: Path to arguments stored in yaml, consult ./config/sample_config.yaml
 ```bash
-python geo_inference.py -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v <vec> -d <device> -id <gpu_id>
+python geo_inference -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v <vec> -d <device> -id <gpu_id>
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
@@ -52,7 +52,7 @@ python geo_inference.py -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v
 You can also use the `-h` option to get a list of supported arguments:
 
 ```bash
-python geo_inference.py -h
+python geo_inference -h
 ```
 
 **Import script**
