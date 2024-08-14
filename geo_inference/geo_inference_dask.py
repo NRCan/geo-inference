@@ -301,15 +301,6 @@ class GeoInference:
                     aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"),attrs=xarray_profile_info(self.raster))
                     aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
                 
-                
-            import pandas as pd
-            df = pd.DataFrame(prof.results)
-            # Save the DataFrame to a CSV file
-            csv_path = '/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/dask_geo_deep_learning/resource_data5.csv'
-            df.to_csv(csv_path, index=False)
-            print("csv is saved")
-
-
             total_time = time.time() - start_time
             if self.mask_to_vec:
                 mask_to_poly_geojson(mask_path, polygons_path)
