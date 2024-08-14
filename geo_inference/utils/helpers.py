@@ -17,6 +17,9 @@ from tqdm import tqdm
 from typing import Dict, Union
 from hydra.utils import to_absolute_path
 from pandas.io.common import is_url
+from collections import OrderedDict
+import pystac
+from pystac.extensions.eo import Band
 
 if str(Path(__file__).parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).parents[1]))
@@ -122,57 +125,6 @@ def extract_tar_gz(tar_gz_file: str | Path, target_directory: str | Path):
         raise
 
 
-def get_device(
-    device: str = "gpu",
-    gpu_id: int = 0,
-    gpu_max_ram_usage: int = 25,
-    gpu_max_utilization: int = 15,
-):
-    """Returns a torch device
-
-    Args:
-        device (str): Accepts "cpu" or "gpu". Defaults to "gpu".
-        gpu_id (int): GPU id. Defaults to 0.
-        gpu_max_ram_usage (int): GPU max ram usage. Defaults to 25.
-        gpu_max_utilization (int): GPU max utilization. Defaults to 15.
-
-    Returns:
-        torch.device: torch device.
-    """
-    if device == "cpu":
-        return torch.device("cpu")
-    elif device == "gpu":
-        res, mem = calculate_gpu_stats(gpu_id=gpu_id)
-        used_ram = mem["used"] / (1024**2)
-        max_ram = mem["total"] / (1024**2)
-        used_ram_percentage = (used_ram / max_ram) * 100
-        logger.info(
-            f"\nGPU RAM used: {round(used_ram_percentage)}%"
-            f"[used_ram: {used_ram:.0f}MiB] [max_ram: {max_ram:.0f}MiB]\n"
-            f"GPU Utilization: {res['gpu']}%"
-        )
-        if used_ram_percentage < gpu_max_ram_usage:
-            if res["gpu"] < gpu_max_utilization:
-                return torch.device(f"cuda:{gpu_id}")
-            else:
-                logger.warning(
-                    f"Reverting to CPU!\n"
-                    f"Current GPU:{gpu_id} utilization: {res['gpu']}%\n"
-                    f"Max GPU utilization allowed: {gpu_max_utilization}%"
-                )
-                return torch.device("cpu")
-        else:
-            logger.warning(
-                f"Reverting to CPU!\n"
-                f"Current GPU:{gpu_id} RAM usage: {used_ram_percentage}%\n"
-                f"Max used RAM allowed: {gpu_max_ram_usage}%"
-            )
-            return torch.device("cpu")
-    else:
-        logger.error("Invalid device type requested: {device}")
-        raise ValueError("Invalid device type")
-
-
 def get_directory(work_directory: str) -> Path:
     """
     Returns a working directory
@@ -193,6 +145,30 @@ def get_directory(work_directory: str) -> Path:
             Path.mkdir(work_directory, parents=True)
 
     return work_directory
+
+
+def download_file_from_url(url, save_path, access_token=None):
+    """Download a file from a URL
+    
+    Args:
+        url (str): URL to the file.
+        save_path (str or Path): Path to save the file.
+        access_token (str, optional): Access token. Defaults to None.
+    """
+    try:
+        headers = {}
+        headers["Authorization"] = f"Bearer {access_token}"
+        response = requests.get(url, headers=headers, stream=True)
+        if response.status_code == 200:
+            with open(save_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=128):
+                    file.write(chunk)
+            logger.info(f"Downloaded {save_path}")
+        else:
+            logger.error(f"Failed to download the file from {url}. Status code: {response.status_code}")
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        raise
 
 
 def get_model(model_path_or_url: str, work_dir: Path) -> Path:
@@ -255,10 +231,8 @@ def select_model_device(gpu_id: int, multi_gpu: bool):
     return device
 
 
-def write_inference_to_tiff(
-    raster_meta,
-    mask_image: np.ndarray,
-    mask_path: Path,
+def xarray_profile_info(
+    raster,
 ):
     """
     Save mask to file.
@@ -269,24 +243,19 @@ def write_inference_to_tiff(
     Returns:
         None
     """
-    mask_image = mask_image[np.newaxis, : mask_image.shape[0], : mask_image.shape[1]]
-    raster_meta.update(
-        {
-            "driver": "GTiff",
-            "height": mask_image.shape[1],
-            "width": mask_image.shape[2],
-            "count": mask_image.shape[0],
-            "dtype": "uint8",
-            "compress": "lzw",
-        }
-    )
-    with rasterio.open(
-        mask_path,
-        "w+",
-        **raster_meta,
-    ) as dest:
-        dest.write(mask_image)
-    logger.info(f"Mask saved to {mask_path}")
+    driver = 'GTiff' if raster.driver == 'VRT' else raster.driver
+    profile_kwargs = {
+        'crs': raster.crs.to_string(),  # Coordinate Reference System, using src.crs.to_string() to get a string representation
+        'transform': raster.transform,  # Affine transformation matrix
+        'count': 1,  # Number of bands
+        'width': raster.width,  # Width of the raster
+        'height': raster.height,  # Height of the raster
+        'driver': driver,  # Raster format driver
+        'dtype': "uint8",  # Data type (use dtype directly if it's a valid format for xarray)
+        'BIGTIFF': 'YES',  # BigTIFF option
+        'compress': 'lzw'  # Compression type
+    }
+    return profile_kwargs
 
 
 def get_tiff_paths_from_csv(
@@ -453,7 +422,7 @@ def cmd_interface(argv=None):
     parser.add_argument("-p", "--patch_size", nargs=1, help="The Patch Size")
 
     parser.add_argument(
-        "-ss", "--stride_size", nargs=1, help="The stride size for overlaps"
+        "-nw", "--num_workers", nargs=1, help="The number of available cores"
     )
 
     parser.add_argument("-v", "--vec", nargs=1, help="Vector Conversion")
@@ -488,20 +457,21 @@ def cmd_interface(argv=None):
         classes = config["arguments"]["classes"]
         n_workers = config["arguments"]["n_workers"]
         patch_size = config["arguments"]["patch_size"]
-    elif args.data_dir:
-        """Not finished"""
-        classes = args.classes[0] if args.classes else 5
-        bbox = args.bbox[0] if args.bbox else None
+    elif args.image:
+        image =args.image[0]
         model = args.model[0] if args.model else None
+        bbox = args.bbox[0] if args.bbox else None
         work_dir = args.work_dir[0] if args.work_dir else None
-        data_dir = args.data_dir[0] if args.data_dir else None
         bands_requested = args.bands_requested[0] if args.bands_requested else None
         vec = args.vec[0] if args.vec else False
-        multi_gpu = args.mgpu[0] if args.mgpu else False
         yolo = args.yolo[0] if args.yolo else False
         coco = args.coco[0] if args.coco else False
         device = args.device[0] if args.device else "gpu"
         gpu_id = args.gpu_id[0] if args.gpu_id else 0
+        multi_gpu = args.mgpu[0] if args.mgpu else False
+        classes = args.classes[0] if args.classes else 5
+        n_workers = args.num_workers[0] if args.classes else 8
+        patch_size = args.patch_size[0] if args.patch_size else 1024 
     else:
         print("use the help [-h] option for correct usage")
         raise SystemExit

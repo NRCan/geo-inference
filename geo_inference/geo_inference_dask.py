@@ -6,7 +6,9 @@ import logging
 import pystac  # type: ignore
 import numpy as np
 import dask.array as da
-
+import asyncio
+import gc
+from dask import config
 from typing import Dict  # type: ignore
 from pathlib import Path
 import rasterio  # type: ignore
@@ -14,6 +16,10 @@ from rasterio.windows import from_bounds  # type: ignore
 from dask_image.imread import imread as dask_imread  # type: ignore
 from typing import Union, Sequence, List
 from omegaconf import ListConfig  # type: ignore
+import threading
+import xarray as xr
+from dask.diagnostics import ResourceProfiler, ProgressBar
+from multiprocessing.pool import ThreadPool
 
 if str(Path(__file__).parents[0]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).parents[0]))
@@ -22,12 +28,11 @@ from utils.helpers import (
     cmd_interface,
     get_directory,
     get_model,
-    write_inference_to_tiff,
+    xarray_profile_info,
     select_model_device,
     asset_by_common_name,
 )
 from geo_dask import (
-    dask_imread_modified,
     runModel,
     sum_overlapped_chunks,
 )
@@ -36,7 +41,8 @@ from utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
 logger = logging.getLogger(__name__)
 
 
-class GeoInferenceDask:
+class GeoInference:
+    
     """
     A class for performing geo inference on geospatial imagery using a pre-trained model.
 
@@ -101,6 +107,36 @@ class GeoInferenceDask:
         num_workers: int = 8,
         bbox: str = None,
     ) -> None:
+        
+        async def run_async():
+            
+            # Start the periodic garbage collection task
+            self.gc_task = asyncio.create_task(self.constant_gc(5))  # Calls gc.collect() every 5 seconds
+            # Run the main computation asynchronously
+            await self.async_run_inference(
+                inference_input=inference_input,
+                bands_requested=bands_requested,
+                patch_size=patch_size,
+                num_workers=num_workers,
+                bbox=bbox
+            )
+            self.gc_task.cancel()
+            
+            try:
+                await self.gc_task
+            except asyncio.CancelledError:
+                logger.info("The End of Inference")
+        
+        asyncio.run(run_async())
+
+    async def async_run_inference(self,
+        inference_input: Union[Path, str],
+        bands_requested: List[str],
+        patch_size: int = 1024,
+        num_workers: int = 8,
+        bbox: str = None,
+    ) -> None:
+        
         """
         Perform geo inference on geospatial imagery using dask array.
 
@@ -115,7 +151,11 @@ class GeoInferenceDask:
             None
 
         """
-
+        
+        # configuring dask 
+        config.set(scheduler='threads', num_workers=num_workers)
+        config.set(pool=ThreadPool(num_workers))
+        
         if not isinstance(inference_input, (str, Path)):
             raise TypeError(
                 f"Invalid raster type.\nGot {inference_input} of type {type(inference_input)}"
@@ -147,6 +187,7 @@ class GeoInferenceDask:
 
         """ Processing starts"""
         start_time = time.time()
+        import rioxarray # type: ignore
         try:
             raster_stac_item = False
             if isinstance(inference_input, pystac.Item):
@@ -160,8 +201,9 @@ class GeoInferenceDask:
             if not raster_stac_item:
                 with rasterio.open(inference_input, "r") as src:
                     self.raster_meta = src.meta
+                    self.raster = src
                 aoi_dask_array = dask_imread(inference_input)
-                aoi_dask_array = da.transpose(da.squeeze(aoi_dask_array), (2, 0, 1))
+                aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=stride_patch_size)
                 try:
                     raster_bands_request = [int(b) for b in bands_requested.split(",")]
                     if (
@@ -179,28 +221,17 @@ class GeoInferenceDask:
                 bands_requested = {
                     band: assets[band] for band in bands_requested.split(",")
                 }
-                aoi_dask_array = [
-                    dask_imread_modified(value["meta"].href)
-                    for key, value in bands_requested.items()
-                ]
-                for key, value in bands_requested.items():
-                    if self.raster_meta is None:
-                        with rasterio.open(value["meta"].href, "r") as src:
-                            self.raster_meta = src.meta
-                    else:
-                        break
-                aoi_dask_array = da.stack(aoi_dask_array, axis=0)
-                aoi_dask_array = da.squeeze(
-                    da.transpose(
-                        aoi_dask_array,
-                        (
-                            1,
-                            0,
-                            2,
-                            3,
-                        ),
-                    )
-                )
+                rio_gdal_options = {
+                    "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
+                    "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif",
+                }
+                all_bands_requested = []
+                
+                with rasterio.Env(**rio_gdal_options):
+                    for key, value in bands_requested.items():
+                        all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=stride_patch_size))
+                self.aoi_dask_array = xr.concat(all_bands_requested, dim="band")
+                del all_bands_requested
 
             if bbox != "None":
                 bbox = tuple(map(float, bbox.split(", ")))
@@ -216,7 +247,7 @@ class GeoInferenceDask:
                 aoi_dask_array = aoi_dask_array[
                     :, row_off : row_off + height, col_off : col_off + width
                 ]
-
+            self.original_shape = aoi_dask_array.shape
             # Pad the array to make dimensions multiples of the patch size
             pad_height = (
                 stride_patch_size - aoi_dask_array.shape[1] % stride_patch_size
@@ -224,15 +255,15 @@ class GeoInferenceDask:
             pad_width = (
                 stride_patch_size - aoi_dask_array.shape[2] % stride_patch_size
             ) % stride_patch_size
-            # now we rechunk data
-            data = da.pad(
-                aoi_dask_array,
+            
+            aoi_dask_array = da.pad(
+                aoi_dask_array.data,
                 ((0, 0), (0, pad_height), (0, pad_width)),
                 mode="constant",
-            ).rechunk((3, stride_patch_size, stride_patch_size))
+            ).rechunk((len(bands_requested), stride_patch_size, stride_patch_size))
 
             # run the model
-            mask_array = data.map_overlap(
+            aoi_dask_array = aoi_dask_array.map_overlap(
                 runModel,
                 model=self.model,
                 patch_size=patch_size,
@@ -247,9 +278,8 @@ class GeoInferenceDask:
                 trim=False,
                 dtype=np.float16,
             )
-            mask_array = da.map_overlap(
+            aoi_dask_array = aoi_dask_array.map_overlap(
                 sum_overlapped_chunks,
-                mask_array,
                 chunk_size=patch_size,
                 drop_axis=0,
                 chunks=(
@@ -261,18 +291,31 @@ class GeoInferenceDask:
                 boundary="none",
                 dtype=np.uint8,
             )
+            
+        
+            with ResourceProfiler(dt=1) as prof:
+                with ProgressBar() as pbar:
+                    pbar.register()
+                    import rioxarray
+                    logger.info("Inference is running:")
+                    aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"),attrs=xarray_profile_info(self.raster))
+                    aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
+                
+                
+            import pandas as pd
+            df = pd.DataFrame(prof.results)
+            # Save the DataFrame to a CSV file
+            csv_path = '/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/dask_geo_deep_learning/resource_data5.csv'
+            df.to_csv(csv_path, index=False)
+            print("csv is saved")
 
-            final_array = mask_array[
-                : aoi_dask_array.shape[1], : aoi_dask_array.shape[2]
-            ].compute(n_workers=num_workers)
 
             total_time = time.time() - start_time
-            write_inference_to_tiff(self.raster_meta, final_array, mask_path)
             if self.mask_to_vec:
                 mask_to_poly_geojson(mask_path, polygons_path)
-                if self.vec_to_yolo:
+                if self.mask_to_yolo:
                     gdf_to_yolo(polygons_path, mask_path, yolo_csv_path)
-                if self.vec_to_coco:
+                if self.mask_to_coco:
                     geojson2coco(mask_path, polygons_path, coco_json_path)
             logger.info(
                 "Extraction Completed in {:.0f}m {:.0f}s".format(
@@ -284,11 +327,15 @@ class GeoInferenceDask:
         except Exception as e:
             print(f"Processing on the Dask cluster failed due to: {e}")
             raise e
-
+    
+    async def constant_gc(self,interval_seconds):
+        while True:
+            gc.collect()  # Call garbage collection
+            await asyncio.sleep(interval_seconds)  # Wait for the specified interval
 
 def main() -> None:
     arguments = cmd_interface()
-    geo_inference = GeoInferenceDask(
+    geo_inference = GeoInference(
         model=arguments["model"],
         work_dir=arguments["work_dir"],
         mask_to_vec=arguments["vec"],
@@ -306,12 +353,6 @@ def main() -> None:
         num_workers=arguments["n_workers"],
         bbox=arguments["bbox"],
     )
-
-    """
-    How to run this script?
-        python /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/geo_inference_dask.py --args /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/geo_inference/geo-inference-dask/geo_inference/config/sample.yaml 
-
-    """
 
 
 if __name__ == "__main__":

@@ -10,8 +10,11 @@ from shapely.wkt import loads
 from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
 from pyogrio.errors import DataSourceError
-
-from ..config.logging_config import logger
+from pathlib import Path
+import sys
+if str(Path(__file__).parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+from config.logging_config import logger
 
 logger = logging.getLogger(__name__)
 

@@ -8,5 +8,5 @@ pynvml>=11.0
 geopandas>=0.10.2
 dask-image>=2024.5.3
 dask>= 2024.6.2
-pims>=0.7
 requests>=2.32.3
+xarray>=2024.6.0 

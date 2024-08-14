@@ -1,52 +1,16 @@
 import sys
-import pims
-import pystac
 import torch
 import logging
-import pathlib
-import rasterio
 
 import numpy as np
-import dask.array as da
 import scipy.signal.windows as w
-
 
 from pathlib import Path
 from scipy.special import expit
-from collections import OrderedDict
-from pystac.extensions.eo import Band  # type: ignore
-from typing import Dict
-from dask_image.imread import _map_read_frame  # type: ignore
 
 if str(Path(__file__).parents[0]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).parents[0]))
 logger = logging.getLogger(__name__)
-
-
-def dask_imread_modified(
-    fname,
-    nframes=1,
-    *,
-    arraytype="numpy",
-):
-    """
-    This function is a modification to the dask_image.imread.imread to handle the shape of tiff files read from URLs.
-    source: https://image.dask.org/en/latest/_modules/dask_image/imread.html#imread
-    """
-    sfname = str(fname)
-    with pims.open(sfname) as imgs:
-        shape = (1,) + imgs.frame_shape
-        dtype = np.dtype(imgs.pixel_type)
-    ar = da.from_array([sfname] * shape[0], chunks=(nframes,))
-    a = ar.map_blocks(
-        _map_read_frame,
-        chunks=da.core.normalize_chunks((nframes,) + shape[1:], shape),
-        multiple_files=False,
-        new_axis=list(range(1, len(shape))),
-        arrayfunc=np.asanyarray,
-        meta=np.asanyarray([]).astype(dtype),  # meta overwrites `dtype` argument
-    )
-    return a
 
 
 def runModel(

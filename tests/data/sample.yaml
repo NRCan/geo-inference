@@ -3,9 +3,13 @@ arguments:
   bbox: None                      # "minx, miny, maxx, maxy" 
   model: "rgb-4class-segformer"   # Name of Extraction Model: str
   work_dir: None                  # Working Directory: str
-  batch_size: 1                   # Batch size
   vec: False                      # Vector Conversion: bool
   yolo: False                     # YOLO Conversion: bool
   coco: False                     # COCO Conversion: bool
   device: "gpu"                   # cpu or gpu: str
   gpu_id: 0                       # GPU ID: int
+  bands_requested: '1,2,3'                  # requested Bands
+  mgpu: False
+  classes : 5
+  n_workers: 20
+  patch_size: 1024

@@ -4,14 +4,12 @@ import tarfile
 import rasterio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
 import pytest
-import torch
-
 from geo_inference.utils.helpers import (calculate_gpu_stats,
-                                         download_file_from_url,
-                                         extract_tar_gz, get_device,
+                                         extract_tar_gz,
                                          get_directory, get_model,
+                                         download_file_from_url,
+                                         select_model_device,
                                          is_tiff_path, is_tiff_url, read_yaml,
                                          validate_asset_type,
                                          cmd_interface)
@@ -48,12 +46,16 @@ def test_read_yaml(test_data_dir):
                                    "bbox": "None",
                                    "model": "rgb-4class-segformer",
                                    "work_dir": "None",
-                                   "batch_size": 1,
+                                   "patch_size": 1024,
                                    "vec": False,
                                    "yolo": False,
                                    "coco": False,
                                    "device": "gpu",
-                                   "gpu_id": 0
+                                   "gpu_id": 0,
+                                   "bands_requested": '1,2,3',
+                                    "mgpu": False,
+                                    "classes": 5,
+                                    "n_workers": 20
                                    }
 
 def test_validate_asset_type(test_data_dir):
@@ -97,8 +99,8 @@ def test_extract_tar_gz(temp_tar_gz_file, test_data_dir):
 def test_get_device():
     with patch('geo_inference.utils.helpers.calculate_gpu_stats') as mock_calculate_gpu_stats:
         mock_calculate_gpu_stats.return_value = ({"gpu": 10}, {"used": 100, "total": 1024})
-        device = get_device(device="gpu", gpu_id=1, gpu_max_ram_usage=20, gpu_max_utilization=10)
-        assert device == torch.device('cpu')
+        device = select_model_device(gpu_id=1, multi_gpu=False)
+        assert device == 'cpu'
 
 def test_get_directory():
     with patch('pathlib.Path.is_dir', return_value=False), patch('pathlib.Path.mkdir'):
@@ -126,36 +128,44 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
 
     # Call the function
     result = cmd_interface()
-    
+
     assert result == {"image": "./data/areial.tiff",
                       "bbox": "None",
+                      "bands_requested" : "1,2,3",
                       "model": "rgb-4class-segformer",
                       "work_dir": "None",
-                      "batch_size": 1,
                       "vec": False,
                       "yolo": False,
                       "coco": False,
                       "device": "gpu",
-                      "gpu_id": 0
+                      "gpu_id": 0,
+                      "classes": 5,
+                      "multi_gpu": False,
+                      "n_workers":20,
+                      "patch_size": 1024
                       }
 
 def test_cmd_interface_with_image(monkeypatch):
     # Mock the command line arguments
-    monkeypatch.setattr('sys.argv', ['prog', '-i', 'image.tif'])
+    monkeypatch.setattr('sys.argv', ['prog', '-im', 'image.tif'])
     # Call the function
     result = cmd_interface()
     # Assert the result
     assert result == {
         "image": "image.tif",
         "bbox": None,
+        "bands_requested" : None,
         "model": None,
         "work_dir": None,
-        "batch_size": 1,
+        "patch_size": 1024,
         "vec": False,
         "yolo": False,
         "coco": False,
         "device": "gpu",
-        "gpu_id": 0
+        "gpu_id": 0,
+        "classes": 5,
+        "multi_gpu": False,
+        "n_workers":8
     }
 
 def test_cmd_interface_no_args(monkeypatch):
