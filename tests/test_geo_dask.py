@@ -62,8 +62,8 @@ def mock_block_info_right_edge():
     block_info = [{"num-chunks": [1, 3, 3], "chunk-location": [0, 1, 2]}]
     return block_info
 
-
-def test_generate_corner_windows(window_size: int) -> np.ndarray:
+@pytest.fixture
+def generate_corner_windows() -> np.ndarray:
     """
     Generates 9 2D signal windows that covers edge and corner coordinates
 
@@ -73,8 +73,8 @@ def test_generate_corner_windows(window_size: int) -> np.ndarray:
     Returns:
         np.ndarray: 9 2D signal windows stacked in array (3, 3).
     """
-    step = window_size >> 1
-    window = np.matrix(w.hann(M=window_size, sym=False))
+    step = 4 >> 1
+    window = np.matrix(w.hann(M=4, sym=False))
     window = window.T.dot(window)
     window_u = np.vstack(
         [np.tile(window[step : step + 1, :], (step, 1)), window[step:, :]]
@@ -132,12 +132,18 @@ class TestSumOverlappedChunks:
         arr = np.zeros((3, 6, 8))
         arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
         arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
 
-        expected_result = arr[:, :2, :2] + arr[:, :2, 2:4]
+        expected_result = np.divide(
+            arr[:-1, :2, :2] + arr[:-1, :2, 2:4],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
+        
         produced_result = code.sum_overlapped_chunks(arr, 4, mock_block_info_top_edge)
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_top_right_corner(
         self,
@@ -148,14 +154,18 @@ class TestSumOverlappedChunks:
         arr = np.zeros((3, 6, 6))
         arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
         arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
-
-        expected_result = arr[:, :2, :2]
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
+        expected_result = np.divide(
+            arr[:-1, :2, :2],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
         produced_result = code.sum_overlapped_chunks(
             arr, 4, mock_block_info_top_right_corner
         )
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_top_left_corner(
         self, mock_block_info_top_left_corner
@@ -165,14 +175,18 @@ class TestSumOverlappedChunks:
         arr = np.zeros((3, 6, 6))
         arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
         arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
-
-        expected_result = arr[:, :2, :2]
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
+        expected_result = np.divide(
+            arr[:-1, :2, :2],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
         produced_result = code.sum_overlapped_chunks(
             arr, 4, mock_block_info_top_left_corner
         )
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_bottom_right_corner(
         self,
@@ -184,13 +198,18 @@ class TestSumOverlappedChunks:
         arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
         arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
 
-        expected_result = arr[:, :2, :2]
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
+        expected_result = np.divide(
+            arr[:-1, :2, :2],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
         produced_result = code.sum_overlapped_chunks(
             arr, 4, mock_block_info_bottom_right_corner
         )
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_bottom_left_corner(
         self, mock_block_info_bottom_left_corner
@@ -200,14 +219,18 @@ class TestSumOverlappedChunks:
         arr = np.zeros((3, 6, 6))
         arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
         arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
-
-        expected_result = arr[:, :2, :2]
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 6))
+        expected_result = np.divide(
+            arr[:-1, :2, :2],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
         produced_result = code.sum_overlapped_chunks(
             arr, 4, mock_block_info_bottom_left_corner
         )
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_bottom_edge(
         self,
@@ -218,14 +241,20 @@ class TestSumOverlappedChunks:
         arr = np.zeros((3, 6, 8))
         arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
         arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
 
-        expected_result = arr[:, :2, :2] + arr[:, :2, 2:4]
+        expected_result = np.divide(
+            arr[:-1, :2, :2] + arr[:-1, :2, 2:4],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
+        
         produced_result = code.sum_overlapped_chunks(
             arr, 4, mock_block_info_bottom_edge
         )
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_right_edge(
         self,
@@ -233,15 +262,21 @@ class TestSumOverlappedChunks:
     ):
         from geo_inference import geo_dask as code
 
-        arr = np.zeros((3, 8, 6))
-        arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 8, 6))
-        arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 8, 6))
+        arr = np.zeros((3, 6, 8))
+        arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
+        arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
 
-        expected_result = arr[:, :2, :2] + arr[:, 2:4, :2]
+        expected_result = np.divide(
+            arr[:-1, :2, :2] + arr[:-1, 2:4, :2],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
+        
         produced_result = code.sum_overlapped_chunks(arr, 4, mock_block_info_right_edge)
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
     def test_sum_overlapped_chunks_left_edge(
         self,
@@ -249,15 +284,21 @@ class TestSumOverlappedChunks:
     ):
         from geo_inference import geo_dask as code
 
-        arr = np.zeros((3, 8, 6))
-        arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 8, 6))
-        arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 8, 6))
+        arr = np.zeros((3, 6, 8))
+        arr[0, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
+        arr[1, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
+        arr[2, :, :] = np.random.randint(low=1, high=5, size=(1, 6, 8))
 
-        expected_result = arr[:, :2, :2] + arr[:, 2:4, :2]
+        expected_result = np.divide(
+            arr[:-1, :2, :2] + arr[:-1, 2:4, :2],
+            arr[-1, :2, :2],
+            out=np.zeros_like(arr[:-1, :2, :2], dtype=float),
+            where=arr[:-1, :2, :2] != 0,
+        )
+        
         produced_result = code.sum_overlapped_chunks(arr, 4, mock_block_info_left_edge)
         np.testing.assert_array_almost_equal(
-            np.argmax(expected_result, axis=0), produced_result
-        )
+            np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
 
 class TestModelInference:
@@ -265,7 +306,7 @@ class TestModelInference:
     from unittest.mock import patch
 
     @patch("torch.jit.load")
-    def test_run_model_inference_left_edge(self, mock_load, mock_block_info_left_edge):
+    def test_run_model_inference_left_edge(self, mock_load, mock_block_info_left_edge, generate_corner_windows):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
 
@@ -296,14 +337,14 @@ class TestModelInference:
             mock_block_info_left_edge,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[2, 0, :, :]
+            output[0, :, :], generate_corner_windows[2, 0, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
 
     @patch("torch.jit.load")
     def test_run_model_inference_right_edge(
-        self, mock_load, mock_block_info_right_edge
+        self, mock_load, mock_block_info_right_edge, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -335,14 +376,14 @@ class TestModelInference:
             mock_block_info_right_edge,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[2, 2, :, :]
+            output[0, :, :], generate_corner_windows[2, 2, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
 
     @patch("torch.jit.load")
     def test_run_model_inference_bottom_edge(
-        self, mock_load, mock_block_info_bottom_edge
+        self, mock_load, mock_block_info_bottom_edge, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -374,14 +415,14 @@ class TestModelInference:
             mock_block_info_bottom_edge,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[2, 2, :, :]
+            output[0, :, :], generate_corner_windows[2, 2, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
     
     @patch("torch.jit.load")
     def test_run_model_inference_bottom_left_corner(
-        self, mock_load, mock_block_info_bottom_left_corner
+        self, mock_load, mock_block_info_bottom_left_corner, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -413,17 +454,17 @@ class TestModelInference:
             mock_block_info_bottom_left_corner,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[2,0, :, :] * mock_numpy_result[0, 0, :, :]
+            output[0, :, :], generate_corner_windows[2,0, :, :] * mock_numpy_result[0, 0, :, :]
         )
         assert np.array_equal(
-            output[3, :, :], test_generate_corner_windows(4)[2,0, :, :]
+            output[3, :, :], generate_corner_windows[2,0, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
     
     @patch("torch.jit.load")
     def test_run_model_inference_bottom_right_corner(
-        self, mock_load, mock_block_info_bottom_right_corner
+        self, mock_load, mock_block_info_bottom_right_corner, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -455,17 +496,17 @@ class TestModelInference:
             mock_block_info_bottom_right_corner,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[2,2, :, :] * mock_numpy_result[0, 0, :, :]
+            output[0, :, :], generate_corner_windows[2,2, :, :] * mock_numpy_result[0, 0, :, :]
         )
         assert np.array_equal(
-            output[3, :, :], test_generate_corner_windows(4)[2,2, :, :]
+            output[3, :, :], generate_corner_windows[2,2, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
 
     @patch("torch.jit.load")
     def test_run_model_inference_top_left_corner(
-        self, mock_load, mock_block_info_top_left_corner
+        self, mock_load, mock_block_info_top_left_corner, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -497,17 +538,17 @@ class TestModelInference:
             mock_block_info_top_left_corner,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[0,0, :, :] * mock_numpy_result[0, 0, :, :]
+            output[0, :, :], generate_corner_windows[0,0, :, :] * mock_numpy_result[0, 0, :, :]
         )
         assert np.array_equal(
-            output[3, :, :], test_generate_corner_windows(4)[0,0, :, :]
+            output[3, :, :], generate_corner_windows[0,0, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
     
     @patch("torch.jit.load")
     def test_run_model_inference_top_right_corner(
-        self, mock_load, mock_block_info_top_right_corner
+        self, mock_load, mock_block_info_top_right_corner, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -539,17 +580,17 @@ class TestModelInference:
             mock_block_info_top_right_corner,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[0,2, :, :] * mock_numpy_result[0, 0, :, :]
+            output[0, :, :], generate_corner_windows[0,2, :, :] * mock_numpy_result[0, 0, :, :]
         )
         assert np.array_equal(
-            output[3, :, :], test_generate_corner_windows(4)[0,2, :, :]
+            output[3, :, :], generate_corner_windows[0,2, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
 
     @patch("torch.jit.load")
     def test_run_model_inference_top_edge(
-        self, mock_load, mock_block_info_top_edge
+        self, mock_load, mock_block_info_top_edge, generate_corner_windows
     ):
         from unittest.mock import MagicMock
         from geo_inference import geo_dask as code
@@ -581,10 +622,10 @@ class TestModelInference:
             mock_block_info_top_edge,
         )
         assert np.array_equal(
-            output[0, :, :], test_generate_corner_windows(4)[0,2, :, :] * mock_numpy_result[0, 0, :, :]
+            output[0, :, :], generate_corner_windows[0,2, :, :] * mock_numpy_result[0, 0, :, :]
         )
         assert np.array_equal(
-            output[3, :, :], test_generate_corner_windows(4)[0,2, :, :]
+            output[3, :, :], generate_corner_windows[0,2, :, :]
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
