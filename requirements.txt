@@ -11,3 +11,4 @@ dask>= 2024.6.2
 requests>=2.32.3
 xarray>=2024.6.0 
 pystac>=1.10.1
+rioxarray>=0.15.6
