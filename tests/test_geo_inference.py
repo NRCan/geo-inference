@@ -37,7 +37,7 @@ class TestGeoInference:
         # bbox = '0,0,100,100'
         patch_size = 512
         bands_requested="1,2,3"
-        geo_inference(str(tiff_image), bands_requested, patch_size, 4, "None") 
+        geo_inference(str(tiff_image), bands_requested, patch_size, None) 
         mask_path = geo_inference.work_dir / "0_mask.tif"
         assert mask_path.exists()
         if geo_inference.mask_to_vec:

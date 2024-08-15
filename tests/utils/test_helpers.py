@@ -153,7 +153,7 @@ def test_cmd_interface_with_image(monkeypatch):
     assert result == {
         "image": "image.tif",
         "bbox": None,
-        "bands_requested" : None,
+        "bands_requested" : [],
         "model": None,
         "work_dir": None,
         "patch_size": 1024,
