@@ -10,7 +10,7 @@ import shapely
 from rasterio import features
 from shapely.geometry import shape
 from pathlib import Path
-import sys
+
 
 from ..config.logging_config import logger
 from .geo import rasterio_load

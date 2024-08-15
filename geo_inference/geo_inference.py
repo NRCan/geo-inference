@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import torch  # type: ignore
 import logging
@@ -21,7 +20,6 @@ import xarray as xr
 from dask.diagnostics import ResourceProfiler, ProgressBar
 from multiprocessing.pool import ThreadPool
 
-
 from .utils.helpers import (
     cmd_interface,
     get_directory,
@@ -34,7 +32,8 @@ from .geo_dask import (
     runModel,
     sum_overlapped_chunks,
 )
-from .utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
+
+from.utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
 
 logger = logging.getLogger(__name__)
 
@@ -100,9 +99,8 @@ class GeoInference:
     def __call__(
         self,
         inference_input: Union[Path, str],
-        bands_requested: List[str],
+        bands_requested: List[str] = [],
         patch_size: int = 1024,
-        num_workers: int = 8,
         bbox: str = None,
     ) -> None:
         
@@ -115,7 +113,6 @@ class GeoInference:
                 inference_input=inference_input,
                 bands_requested=bands_requested,
                 patch_size=patch_size,
-                num_workers=num_workers,
                 bbox=bbox
             )
             self.gc_task.cancel()
@@ -129,9 +126,8 @@ class GeoInference:
 
     async def async_run_inference(self,
         inference_input: Union[Path, str],
-        bands_requested: List[str],
+        bands_requested: List[str] = [],
         patch_size: int = 1024,
-        num_workers: int = 8,
         bbox: str = None,
     ) -> None:
         
@@ -142,7 +138,6 @@ class GeoInference:
             inference_input Union[Path, str]: The path/url to the geospatial image to perform inference on.
             bands_requested List[str]: The requested bands to consider for the inference.
             patch_size (int): The size of the patches to use for inference.
-            num_workers (int) : The number of available cores for running the inference in parallel.
             bbox (str): The bbox or extent of the image in this format "minx, miny, maxx, maxy".
 
         Returns:
@@ -151,8 +146,12 @@ class GeoInference:
         """
         
         # configuring dask 
-        config.set(scheduler='threads', num_workers=num_workers)
-        config.set(pool=ThreadPool(num_workers))
+        try:
+            config.set(scheduler='threads', num_workers=int(os.getenv('SLURM_CPUS_PER_TASK', 'Not available')) - 1)
+            config.set(pool=ThreadPool(int(os.getenv('SLURM_CPUS_PER_TASK', 'Not available')) - 1))
+        except ValueError:
+            config.set(scheduler='threads', num_workers = os.cpu_count() - 1)
+            config.set(pool=ThreadPool(os.cpu_count() -1))
         
         if not isinstance(inference_input, (str, Path)):
             raise TypeError(
@@ -200,18 +199,18 @@ class GeoInference:
                 with rasterio.open(inference_input, "r") as src:
                     self.raster_meta = src.meta
                     self.raster = src
-                aoi_dask_array = dask_imread(inference_input)
                 aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=stride_patch_size)
                 try:
-                    raster_bands_request = [int(b) for b in bands_requested.split(",")]
-                    if (
-                        len(raster_bands_request) != 0
-                        and len(raster_bands_request) != aoi_dask_array.shape[0]
-                    ):
-                        aoi_dask_array = da.stack(
-                            [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
-                            axis=0,
-                        )
+                    if bands_requested:
+                        raster_bands_request = [int(b) for b in bands_requested.split(",")]
+                        if (
+                            len(raster_bands_request) != 0
+                            and len(raster_bands_request) != aoi_dask_array.shape[0]
+                        ):
+                            aoi_dask_array = da.stack(
+                                [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
+                                axis=0,
+                            )
                 except Exception as e:
                     raise e
             else:
@@ -224,14 +223,16 @@ class GeoInference:
                     "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif",
                 }
                 all_bands_requested = []
-                
                 with rasterio.Env(**rio_gdal_options):
+                    with rasterio.open(bands_requested[next(iter(bands_requested))]["meta"].href, "r") as src:
+                        self.raster_meta = src.meta
+                        self.raster = src
                     for key, value in bands_requested.items():
                         all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=stride_patch_size))
-                self.aoi_dask_array = xr.concat(all_bands_requested, dim="band")
+                aoi_dask_array = xr.concat(all_bands_requested, dim="band")
                 del all_bands_requested
 
-            if bbox != "None":
+            if bbox is not None:
                 bbox = tuple(map(float, bbox.split(", ")))
                 roi_window = from_bounds(
                     left=bbox[0],
@@ -253,12 +254,13 @@ class GeoInference:
             pad_width = (
                 stride_patch_size - aoi_dask_array.shape[2] % stride_patch_size
             ) % stride_patch_size
-            
+            print(aoi_dask_array.shape[0])
             aoi_dask_array = da.pad(
                 aoi_dask_array.data,
                 ((0, 0), (0, pad_height), (0, pad_width)),
                 mode="constant",
-            ).rechunk((len(bands_requested), stride_patch_size, stride_patch_size))
+            ).rechunk((aoi_dask_array.shape[0], stride_patch_size, stride_patch_size))
+
 
             # run the model
             aoi_dask_array = aoi_dask_array.map_overlap(
@@ -337,9 +339,8 @@ def main() -> None:
     )
     geo_inference(
         inference_input=arguments["image"],
-        bands_requested=arguments["bands_requested"],
+        bands_requested=arguments["bands_requested"]
         patch_size=arguments["patch_size"],
-        num_workers=arguments["n_workers"],
         bbox=arguments["bbox"],
     )
 

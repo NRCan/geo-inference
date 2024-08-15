@@ -2,12 +2,10 @@ import argparse
 import logging
 import os
 import re
-import sys
 import tarfile
 import rasterio
 from pathlib import Path
 from urllib.parse import urlparse
-import numpy as np
 import requests
 import torch
 import yaml
@@ -235,9 +233,7 @@ def xarray_profile_info(
     """
     Save mask to file.
     Args:
-        raster_meta : The meta data of the input raster.
-        mask_image (np.ndarray): The output mask.
-        mask_path (pathlib.Path) : The path to save the mask.
+        raster : The meta data of the input raster.
     Returns:
         None
     """
@@ -396,8 +392,6 @@ def cmd_interface(argv=None):
         help="Path to arguments stored in yaml, consult ./config/sample_config.yaml",
     )
 
-    parser.add_argument("-dd", "--data_dir", nargs=1, help="Data Directory")
-
     parser.add_argument(
         "-bb", "--bbox", nargs=1, help="AOI bbox in this format'minx, miny, maxx, maxy'"
     )
@@ -410,18 +404,14 @@ def cmd_interface(argv=None):
     )
 
     parser.add_argument(
-        "-im", "--image", nargs=1, help="Path or URL to the input image"
+        "-i", "--image", nargs=1, help="Path or URL to the input image"
     )
 
     parser.add_argument("-m", "--model", nargs=1, help="Path or URL to the model file")
 
     parser.add_argument("-wd", "--work_dir", nargs=1, help="Working Directory")
 
-    parser.add_argument("-p", "--patch_size", nargs=1, help="The Patch Size")
-
-    parser.add_argument(
-        "-nw", "--num_workers", nargs=1, help="The number of available cores"
-    )
+    parser.add_argument("-bs", "--patch_size", nargs=1, help="The Patch Size")
 
     parser.add_argument("-v", "--vec", nargs=1, help="Vector Conversion")
 
@@ -443,7 +433,7 @@ def cmd_interface(argv=None):
         config = read_yaml(args.args[0])
         image = config["arguments"]["image"]
         model = config["arguments"]["model"]
-        bbox = config["arguments"]["bbox"]
+        bbox = None if config["arguments"]["bbox"].lower() == "none" else config["arguments"]["bbox"]
         work_dir = config["arguments"]["work_dir"]
         bands_requested = config["arguments"]["bands_requested"]
         vec = config["arguments"]["vec"]
@@ -453,14 +443,13 @@ def cmd_interface(argv=None):
         gpu_id = config["arguments"]["gpu_id"]
         multi_gpu = config["arguments"]["mgpu"]
         classes = config["arguments"]["classes"]
-        n_workers = config["arguments"]["n_workers"]
         patch_size = config["arguments"]["patch_size"]
     elif args.image:
         image =args.image[0]
         model = args.model[0] if args.model else None
         bbox = args.bbox[0] if args.bbox else None
         work_dir = args.work_dir[0] if args.work_dir else None
-        bands_requested = args.bands_requested[0] if args.bands_requested else None
+        bands_requested = args.bands_requested[0] if args.bands_requested else []
         vec = args.vec[0] if args.vec else False
         yolo = args.yolo[0] if args.yolo else False
         coco = args.coco[0] if args.coco else False
@@ -468,7 +457,6 @@ def cmd_interface(argv=None):
         gpu_id = args.gpu_id[0] if args.gpu_id else 0
         multi_gpu = args.mgpu[0] if args.mgpu else False
         classes = args.classes[0] if args.classes else 5
-        n_workers = args.num_workers[0] if args.classes else 8
         patch_size = args.patch_size[0] if args.patch_size else 1024 
     else:
         print("use the help [-h] option for correct usage")
@@ -486,7 +474,6 @@ def cmd_interface(argv=None):
         "coco": coco,
         "device": device,
         "gpu_id": gpu_id,
-        "n_workers": n_workers,
         "patch_size": patch_size,
     }
     return arguments

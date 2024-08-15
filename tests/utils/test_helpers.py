@@ -130,7 +130,7 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
     result = cmd_interface()
 
     assert result == {"image": "./data/areial.tiff",
-                      "bbox": "None",
+                      "bbox": None,
                       "bands_requested" : "1,2,3",
                       "model": "rgb-4class-segformer",
                       "work_dir": "None",
@@ -141,13 +141,12 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
                       "gpu_id": 0,
                       "classes": 5,
                       "multi_gpu": False,
-                      "n_workers":20,
                       "patch_size": 1024
                       }
 
 def test_cmd_interface_with_image(monkeypatch):
     # Mock the command line arguments
-    monkeypatch.setattr('sys.argv', ['prog', '-im', 'image.tif'])
+    monkeypatch.setattr('sys.argv', ['prog', '-i', 'image.tif'])
     # Call the function
     result = cmd_interface()
     # Assert the result
@@ -165,7 +164,6 @@ def test_cmd_interface_with_image(monkeypatch):
         "gpu_id": 0,
         "classes": 5,
         "multi_gpu": False,
-        "n_workers":8
     }
 
 def test_cmd_interface_no_args(monkeypatch):

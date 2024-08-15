@@ -17,8 +17,6 @@ from rasterio.warp import transform_bounds
 from rtree.core import RTreeError
 from shapely.geometry import Polygon, mapping, shape
 
-from pathlib import Path
-import sys
 
 from ..config.logging_config import logger
 from .geo import check_crs, check_geom, df_load, gdf_load, rasterio_load

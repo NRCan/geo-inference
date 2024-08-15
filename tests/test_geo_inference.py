@@ -2,7 +2,7 @@ import os
 import pytest
 import torch
 
-from geo_inference.geo_inference_dask import GeoInference
+from geo_inference.geo_inference import GeoInference
 from pathlib import Path
 
 @pytest.fixture
