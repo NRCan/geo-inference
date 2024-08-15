@@ -40,14 +40,17 @@ python geo_inference -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v <v
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
+- `-br`, `--bands_requested`: The requested bands from provided Geotiff (if not provided, it uses all bands)
+- `-mg`, `--mgpu`: Whether to use multi-gpu processing or not
 - `-m`, `--model`: Path or URL to the model file
 - `-wd`, `--work_dir`: Working Directory
-- `-bs`, `--batch_size`: The Batch Size
+- `-bs`, `--batch_size`: The Batch Size, Default = 1024
 - `-v`, `--vec`: Vector Conversion
 - `-y`, `--yolo`: Yolo Conversion
 - `-c`, `--coco`: Coco Conversion
 - `-d`, `--device`: CPU or GPU Device
 - `-id`, `--gpu_id`: GPU ID, Default = 0
+- `-cls`, `--classes`: The number of classes that model outputs,Default = 5
 
 You can also use the `-h` option to get a list of supported arguments:
 
