@@ -21,9 +21,6 @@ import xarray as xr
 from dask.diagnostics import ResourceProfiler, ProgressBar
 from multiprocessing.pool import ThreadPool
 
-if str(Path(__file__).parents[0]) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).parents[0]))
-
 from utils.helpers import (
     cmd_interface,
     get_directory,

@@ -8,8 +8,6 @@ import scipy.signal.windows as w
 from pathlib import Path
 from scipy.special import expit
 
-if str(Path(__file__).parents[0]) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).parents[0]))
 logger = logging.getLogger(__name__)
 
 

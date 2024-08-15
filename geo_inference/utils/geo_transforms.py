@@ -19,8 +19,7 @@ from shapely.geometry import Polygon, mapping, shape
 
 from pathlib import Path
 import sys
-if str(Path(__file__).parents[1]) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).parents[1]))
+
 from config.logging_config import logger
 from utils.geo import check_crs, check_geom, df_load, gdf_load, rasterio_load
 
