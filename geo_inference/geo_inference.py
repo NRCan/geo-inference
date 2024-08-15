@@ -20,7 +20,12 @@ import xarray as xr
 from dask.diagnostics import ResourceProfiler, ProgressBar
 from multiprocessing.pool import ThreadPool
 
-from .utils.helpers import (
+from pathlib import Path
+import sys
+if str(Path(__file__).parents[0]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parents[0]))
+
+from utils.helpers import (
     cmd_interface,
     get_directory,
     get_model,
@@ -28,12 +33,12 @@ from .utils.helpers import (
     select_model_device,
     asset_by_common_name,
 )
-from .geo_dask import (
+from geo_dask import (
     runModel,
     sum_overlapped_chunks,
 )
 
-from.utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
+from utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
 
 logger = logging.getLogger(__name__)
 
