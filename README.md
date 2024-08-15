@@ -41,28 +41,17 @@ python geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> 
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
 - `-br`, `--bands_requested`: The requested bands from provided Geotiff (if not provided, it uses all bands)
-<<<<<<< HEAD
 - `-m`, `--model`: Path or URL to the model file
 - `-wd`, `--work_dir`: Working Directory
 - `-bs`, `--batch_size`: The Batch Size, the size of dask chunks, Default = 1024
-=======
-- `-mg`, `--mgpu`: Whether to use multi-gpu processing or not
-- `-m`, `--model`: Path or URL to the model file
-- `-wd`, `--work_dir`: Working Directory
-- `-bs`, `--batch_size`: The Batch Size, Default = 1024
->>>>>>> 938e8eb9b35eda25e00d5f20fc916e882b0f9c29
 - `-v`, `--vec`: Vector Conversion
 - `-y`, `--yolo`: Yolo Conversion
 - `-c`, `--coco`: Coco Conversion
 - `-d`, `--device`: CPU or GPU Device
 - `-id`, `--gpu_id`: GPU ID, Default = 0
-<<<<<<< HEAD
 - `-cls`, `--classes`: The number of classes that model outputs, Default = 5
 - `-mg`, `--mgpu`: Whether to use multi-gpu processing or not, Default = False
 
-=======
-- `-cls`, `--classes`: The number of classes that model outputs,Default = 5
->>>>>>> 938e8eb9b35eda25e00d5f20fc916e882b0f9c29
 
 You can also use the `-h` option to get a list of supported arguments:
 
