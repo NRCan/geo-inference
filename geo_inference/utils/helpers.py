@@ -21,8 +21,7 @@ from collections import OrderedDict
 import pystac
 from pystac.extensions.eo import Band
 
-
-from config.logging_config import logger
+from ..config.logging_config import logger
 
 logger = logging.getLogger(__name__)
 

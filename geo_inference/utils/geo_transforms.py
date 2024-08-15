@@ -20,8 +20,8 @@ from shapely.geometry import Polygon, mapping, shape
 from pathlib import Path
 import sys
 
-from config.logging_config import logger
-from utils.geo import check_crs, check_geom, df_load, gdf_load, rasterio_load
+from ..config.logging_config import logger
+from .geo import check_crs, check_geom, df_load, gdf_load, rasterio_load
 
 logger = logging.getLogger(__name__)
 

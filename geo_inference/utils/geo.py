@@ -13,7 +13,7 @@ from pyogrio.errors import DataSourceError
 from pathlib import Path
 import sys
 
-from config.logging_config import logger
+from ..config.logging_config import logger
 
 logger = logging.getLogger(__name__)
 
