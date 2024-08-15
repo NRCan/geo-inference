@@ -212,9 +212,9 @@ class GeoInference:
                             len(raster_bands_request) != 0
                             and len(raster_bands_request) != aoi_dask_array.shape[0]
                         ):
-                            aoi_dask_array = da.stack(
+                            aoi_dask_array = xr.concat(
                                 [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
-                                axis=0,
+                                dim="band"
                             )
                 except Exception as e:
                     raise e
