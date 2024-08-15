@@ -339,7 +339,7 @@ def main() -> None:
     )
     geo_inference(
         inference_input=arguments["image"],
-        bands_requested=arguments["bands_requested"]
+        bands_requested=arguments["bands_requested"],
         patch_size=arguments["patch_size"],
         bbox=arguments["bbox"],
     )
