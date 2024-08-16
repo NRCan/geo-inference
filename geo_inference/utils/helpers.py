@@ -413,7 +413,7 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-wd", "--work_dir", nargs=1, help="Working Directory")
 
-    parser.add_argument("-bs", "--patch_size", nargs=1, help="The Patch Size")
+    parser.add_argument("-ps", "--patch_size", nargs=1, help="The Patch Size")
 
     parser.add_argument("-v", "--vec", nargs=1, help="Vector Conversion")
 

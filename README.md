@@ -36,14 +36,14 @@ python geo_inference -a <args>
 ```
 - `-a`, `--args`: Path to arguments stored in yaml, consult ./config/sample_config.yaml
 ```bash
-python geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -bs <batch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu>
+python geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <patch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu>
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
 - `-br`, `--bands_requested`: The requested bands from provided Geotiff (if not provided, it uses all bands)
 - `-m`, `--model`: Path or URL to the model file
 - `-wd`, `--work_dir`: Working Directory
-- `-bs`, `--batch_size`: The Batch Size, the size of dask chunks, Default = 1024
+- `-ps`, `--patch_size`: The patch Size, the size of dask chunks, Default = 1024
 - `-v`, `--vec`: Vector Conversion
 - `-y`, `--yolo`: Yolo Conversion
 - `-c`, `--coco`: Coco Conversion
@@ -67,7 +67,7 @@ from geo_inference.geo_inference import GeoInference
 geo_inference = GeoInference(
     model="/path/to/segformer_B5.pt",
     work_dir="/path/to/work/dir",
-    batch_size=1024,
+    patch_size=1024,
     mask_to_vec=False,
     mask_to_yolo=False,
     mask_to_coco=False, 
@@ -89,7 +89,7 @@ The `GeoInference` class takes the following parameters:
 
 - `model`: The path or URL to the model file (.pt for PyTorch models) to use for feature extraction.
 - `work_dir`: The path to the working directory. Default is `"~/.cache"`.
-- `batch_size`: The batch size to use for feature extraction. Default is `4`.
+- `patch_size`: The patch size to use for feature extraction. Default is `4`.
 - `mask_to_vec`: If set to `"True"`, vector data will be created from mask. Default is `"False"`
 - `mask_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
 - `mask_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
