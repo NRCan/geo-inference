@@ -36,18 +36,22 @@ python geo_inference -a <args>
 ```
 - `-a`, `--args`: Path to arguments stored in yaml, consult ./config/sample_config.yaml
 ```bash
-python geo_inference -i <image> -m <model> -wd <work_dir> -bs <batch_size> -v <vec> -d <device> -id <gpu_id>
+python geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <patch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu>
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
+- `-br`, `--bands_requested`: The requested bands from provided Geotiff (if not provided, it uses all bands)
 - `-m`, `--model`: Path or URL to the model file
 - `-wd`, `--work_dir`: Working Directory
-- `-bs`, `--batch_size`: The Batch Size
+- `-ps`, `--patch_size`: The patch Size, the size of dask chunks, Default = 1024
 - `-v`, `--vec`: Vector Conversion
 - `-y`, `--yolo`: Yolo Conversion
 - `-c`, `--coco`: Coco Conversion
 - `-d`, `--device`: CPU or GPU Device
 - `-id`, `--gpu_id`: GPU ID, Default = 0
+- `-cls`, `--classes`: The number of classes that model outputs, Default = 5
+- `-mg`, `--mgpu`: Whether to use multi-gpu processing or not, Default = False
+
 
 You can also use the `-h` option to get a list of supported arguments:
 
@@ -63,18 +67,20 @@ from geo_inference.geo_inference import GeoInference
 geo_inference = GeoInference(
     model="/path/to/segformer_B5.pt",
     work_dir="/path/to/work/dir",
-    batch_size=4,
+    patch_size=1024,
     mask_to_vec=False,
-    vec_to_yolo=False,
-    vec_to_coco=False, 
+    mask_to_yolo=False,
+    mask_to_coco=False, 
     device="gpu",
-    gpu_id=0
+    multi_gpu=False,
+    gpu_id=0, 
+    num_classes=5
 )
 
 # Perform feature extraction on a TIFF image
 image_path = "/path/to/image.tif"
 patch_size = 512
-geo_inference(tiff_image = image_path, patch_size = patch_size,)
+geo_inference(tiff_image = image_path,  bands_requested = bands_requested, patch_size = patch_size,)
 ```
 
 ## Parameters
@@ -83,13 +89,14 @@ The `GeoInference` class takes the following parameters:
 
 - `model`: The path or URL to the model file (.pt for PyTorch models) to use for feature extraction.
 - `work_dir`: The path to the working directory. Default is `"~/.cache"`.
-- `batch_size`: The batch size to use for feature extraction. Default is `4`.
+- `patch_size`: The patch size to use for feature extraction. Default is `4`.
 - `mask_to_vec`: If set to `"True"`, vector data will be created from mask. Default is `"False"`
-- `vec_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
-- `vec_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
+- `mask_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
+- `mask_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
 - `device`: The device to use for feature extraction. Can be `"cpu"` or `"gpu"`. Default is `"gpu"`.
+- `multi_gpu`: If set to `"True"`, uses multi-gpu for running the inference. Default is `"False"`
 - `gpu_id`: The ID of the GPU to use for feature extraction. Default is `0`.
-
+- `num_classes`: The number of classes that the TorchScript model outputs. Default is `5`.
 ## Output
 
 The `GeoInference` class outputs the following files:

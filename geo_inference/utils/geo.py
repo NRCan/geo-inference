@@ -11,6 +11,7 @@ from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
 from pyogrio.errors import DataSourceError
 
+
 from ..config.logging_config import logger
 
 logger = logging.getLogger(__name__)

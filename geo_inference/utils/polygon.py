@@ -9,6 +9,7 @@ import rasterio
 import shapely
 from rasterio import features
 from shapely.geometry import shape
+from pathlib import Path
 
 from ..config.logging_config import logger
 from .geo import rasterio_load
@@ -255,5 +256,4 @@ def geojson2coco(image_src, label_src, output_path=None, category_attribute="val
     with open(output_path, 'w') as outfile:
         json.dump(coco_dataset, outfile)
     logger.info(f"CocoJson file saved to {output_path}")
-
 

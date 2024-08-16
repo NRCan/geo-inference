@@ -1,8 +1,13 @@
-torchgeo>=0.3
-affine>=2.3.0
+torchgeo>=0.5.2
+affine>=2.4.0
 colorlog==6.7.0
-scipy>=1.11.2
+scipy>=1.13.1
 pyyaml>=5.2
-requests>=2.22.0
 pynvml>=11.0
-geopandas>=0.10.2
+geopandas>=0.14.4
+dask-image>=2024.5.3
+dask>= 2024.6.2
+requests>=2.32.3
+xarray>=2024.6.0 
+pystac>=1.10.1
+rioxarray>=0.15.6

@@ -52,7 +52,6 @@ class TestGeo:
         csv_path = test_data_dir / "0_yolo.csv"
         df_1 = df_load(str(csv_path))
         assert isinstance(df_1, pd.DataFrame)
-        
         json_path = test_data_dir / "0_coco.json"
         gdf = gdf_load(json_path)
         assert isinstance(gdf, gpd.GeoDataFrame)
