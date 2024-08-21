@@ -17,8 +17,9 @@ from pathlib import Path
 from omegaconf import ListConfig 
 from rasterio.windows import from_bounds
 from typing import Union, Sequence, List
+from dask.diagnostics import ProgressBar
 from multiprocessing.pool import ThreadPool
-from dask.diagnostics import ResourceProfiler, ProgressBar
+
 
 from .utils.helpers import (
     cmd_interface,
@@ -177,6 +178,9 @@ class GeoInference:
         prefix_base_name = (
             base_name if not base_name.endswith(".tif") else base_name[:-4]
         )
+        prefix_base_name = (
+            prefix_base_name if not prefix_base_name.endswith(".zarr") else base_name[:-5]
+        )
         mask_path = self.work_dir.joinpath(prefix_base_name + "_mask.tif")
         polygons_path = self.work_dir.joinpath(prefix_base_name + "_polygons.geojson")
         yolo_csv_path = self.work_dir.joinpath(prefix_base_name + "_yolo.csv")
@@ -224,7 +228,6 @@ class GeoInference:
                                     [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
                                     axis =0,
                                 )
-
                 except Exception as e:
                     raise e
             else:
@@ -304,13 +307,13 @@ class GeoInference:
                 dtype=np.uint8,
             )
             
-            with ResourceProfiler(dt=1) as prof:
-                with ProgressBar() as pbar:
-                    pbar.register()
-                    import rioxarray
-                    logger.info("Inference is running:")
-                    aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster))
-                    aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
+            
+            with ProgressBar() as pbar:
+                pbar.register()
+                import rioxarray
+                logger.info("Inference is running:")
+                aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster))
+                aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
                 
             total_time = time.time() - start_time
             if self.mask_to_vec:
