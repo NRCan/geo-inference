@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geo-inference"
-version = "2.0.7"
 description = "Extract features from geospatial imagery using deep learning models"
 readme = "README.md"
 authors = [{ name = "Victor Alhassan", email = "victor.alhassan@nrcan-rncan.gc.ca" }]
@@ -18,18 +17,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 keywords = ["pytorch", "deep learning", "machine learning", "remote sensing", "satellite imagery", "earth observation", "geospatial"]
-dependencies = [
-    "torchgeo>=0.3",
-    "affine>=2.3.0",
-    "colorlog==6.7.0",
-    "scipy>=1.11.2",
-    "pyyaml>=5.2",
-    "requests>=2.22.0",
-    "pynvml>=11.0",
-    "geopandas>=0.10.2"
-]
-
+dynamic = ["dependencies","version",]
 requires-python = ">=3.9"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+version = {file = ["VERSION"]}
 
 [project.optional-dependencies]
 dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
@@ -52,8 +45,7 @@ tag = true
 push = false
 
 [tool.bumpver.file_patterns]
+"VERSION" = ["{version}"]
 "pyproject.toml" = [
-    '^version = "{version}"', 
     '^current_version = "{version}"',]
 "geo_inference/__init__.py" = ["{version}"]
-
