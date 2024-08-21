@@ -11,10 +11,10 @@ ARG USERID=1000
 ENV PATH=$CONDA_DIR/bin:$PATH
 
 # RNCAN certificate; uncomment (with right .cer name) if you are building behind a FW
-COPY NRCan-RootCA.cer /usr/local/share/ca-certificates/cert.crt
-RUN chmod 644 /usr/local/share/ca-certificates/cert.crt \
-    && update-ca-certificates \ 
-    && apt-get update \
+# COPY NRCan-RootCA.cer /usr/local/share/ca-certificates/cert.crt
+# RUN chmod 644 /usr/local/share/ca-certificates/cert.crt \
+#     && update-ca-certificates 
+RUN apt-get update \
     && apt-get install -y --no-install-recommends git wget unzip bzip2 build-essential sudo \
     && apt-key del 7fa2af80 \
     && wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb \
