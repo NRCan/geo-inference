@@ -1,6 +1,6 @@
 import os
 import gc
-import sys
+import re
 import time
 import torch
 import pystac
@@ -199,7 +199,7 @@ class GeoInference:
                 self.json = None
                 if os.path.splitext(inference_input_path)[1].lower() == ".zarr":
                     aoi_dask_array = da.from_zarr(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
-                    meta_data_json = Path(inference_input).with_suffix('')
+                    meta_data_json = re.sub(r'\.zarr$', '', inference_input)
                     self.json = read_zarr_metadata(f"{meta_data_json}.json")
                 else:
                     with rasterio.open(inference_input, "r") as src:

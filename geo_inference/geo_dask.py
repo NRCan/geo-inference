@@ -320,7 +320,7 @@ def read_zarr_metadata(
             # Create and return the Affine object
             trs = Affine(matrix_values[0], matrix_values[1], matrix_values[2],
                         matrix_values[3], matrix_values[4], matrix_values[5])
-            return metadata.update({
+            metadata.update({
                 'crs': metadata['crs'],
                 'transform': trs,
                 'count': metadata['count'],
@@ -331,6 +331,7 @@ def read_zarr_metadata(
                 'BIGTIFF': metadata.get('BIGTIFF', 'Unknown'),
                 'compress': metadata.get('compress', 'Unknown')
             })
+            return metadata
     except FileNotFoundError:
         logging.error(f"Error: The file '{metadata_json}' was not found.")
     except json.JSONDecodeError:
