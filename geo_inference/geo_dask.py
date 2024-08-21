@@ -1,7 +1,7 @@
 
 import torch
 import logging
-
+from typing import Union
 import numpy as np
 import scipy.signal.windows as w
 from scipy.special import expit
@@ -302,3 +302,34 @@ def sum_overlapped_chunks(
                 else:
                     final_result = np.argmax(final_result, axis=0).astype(np.uint8)
                 return final_result
+
+
+def read_zarr_metadata(
+    metadata_json: Union[Path, str]
+):
+    try:
+        with open(metadata_json, 'r') as metadat_json:
+            metadata = json.load(metadat_json)
+            lines = metadata['transform'].strip().split('\n')
+            matrix_values = []
+            for line in lines:
+                values = line.strip('|').split(',')
+                matrix_values.extend(float(val.strip()) for val in values)
+            # Create and return the Affine object
+            trs = Affine(matrix_values[0], matrix_values[1], matrix_values[2],
+                        matrix_values[3], matrix_values[4], matrix_values[5])
+            return metadata.update({
+                'crs': metadata['crs'],
+                'transform': trs,
+                'count': metadata['count'],
+                'width': metadata['width'],
+                'height': metadata['height'],
+                'driver': metadata['driver'],
+                'dtype': metadata['dtype'],
+                'BIGTIFF': metadata.get('BIGTIFF', 'Unknown'),
+                'compress': metadata.get('compress', 'Unknown')
+            })
+    except FileNotFoundError:
+        logging.error(f"Error: The file '{metadata_json}' was not found.")
+    except json.JSONDecodeError:
+        logging.error("Error: Failed to decode JSON from the file.")
