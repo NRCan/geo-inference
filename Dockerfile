@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu20.04
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
 ARG CONDA_PYTHON_VERSION=3
 ARG CONDA_DIR=/opt/conda
@@ -46,7 +46,6 @@ RUN cd /home/$USERNAME \
     && mamba install pip \
     && pip install --upgrade pip \
     && pip install --no-cache-dir git+https://github.com/NRCan/geo-inference.git \
-    && pip install --no-cache-dir -r /home/$USERNAME/requirements.txt \
     && pip uninstall -y pip \
     && mamba clean --all
 
