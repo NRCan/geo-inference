@@ -12,11 +12,45 @@ geo-inference is a Python package designed for feature extraction from geospatia
 
 ## Installation
 
-Geo-inference requires Python 3.11. To install the package, use:
+Geo-inference requires Python 3.11.  
+
+### Linux Installation  
+To install the package, use:
 
 ```
 pip install geo-inference
+```  
+
+### Windows Installation
+The recipe to use cuda-enabled Geo-inference on Windows OS is slightly different than on Linux-based OS.  
+
+- Validate the nvidia drivers version installed on your computer by running `nvcc --version`: 
+``` shell
+PS C:\> nvcc --version
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2024 NVIDIA Corporation
+Built on Tue_Feb_27_16:28:36_Pacific_Standard_Time_2024
+Cuda compilation tools, release 12.4, V12.4.99
+Build cuda_12.4.r12.4/compiler.33961263_0
 ```
+> Note: If the command returns an error, you need to download and install the Nvidia-drivers first at https://developer.nvidia.com/cuda-downloads.  
+
+- Install pytorch-cuda following one method suggested here: https://pytorch.org/get-started/locally/.
+> Note: Make sure to select the cuda version matching the driver installed on your computer.  
+- Test the installation:  
+```shell
+PS C:\> python
+>>> import torch
+>>> torch.cuda.is_available()
+>>> True
+```  
+- install geo-inference using `pip`:
+```
+pip install geo-inference
+```
+
+### Docker installation
+Alternatively, you can build the [Dockerfile](./Dockerfile) to use Geo-Inference.  
 
 ## Usage
 
@@ -32,11 +66,11 @@ expects an input image with the same features. An example notebook for how the p
 
 **Command line**
 ```bash
-python geo_inference -a <args>
+geo_inference -a <args>
 ```
 - `-a`, `--args`: Path to arguments stored in yaml, consult ./config/sample_config.yaml
 ```bash
-python geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <patch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu>
+geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <patch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu>
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
@@ -56,7 +90,7 @@ python geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> 
 You can also use the `-h` option to get a list of supported arguments:
 
 ```bash
-python geo_inference -h
+geo_inference -h
 ```
 
 **Import script**
@@ -80,7 +114,7 @@ geo_inference = GeoInference(
 # Perform feature extraction on a TIFF image
 image_path = "/path/to/image.tif"
 patch_size = 512
-geo_inference(tiff_image = image_path,  bands_requested = bands_requested, patch_size = patch_size,)
+geo_inference(tiff_image = image_path,  bands_requested = bands_requested, patch_size = patch_size)
 ```
 
 ## Parameters
@@ -89,7 +123,7 @@ The `GeoInference` class takes the following parameters:
 
 - `model`: The path or URL to the model file (.pt for PyTorch models) to use for feature extraction.
 - `work_dir`: The path to the working directory. Default is `"~/.cache"`.
-- `patch_size`: The patch size to use for feature extraction. Default is `4`.
+- `patch_size`: The patch size to use for feature extraction. Default is `1024`.
 - `mask_to_vec`: If set to `"True"`, vector data will be created from mask. Default is `"False"`
 - `mask_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
 - `mask_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
@@ -110,7 +144,7 @@ Each file contains the extracted features from the input geospatial imagery.
 
 ## License
 
-Geo Inference is released under the MIT License. See [`LICENSE`](https://github.com/NRCan/geo-inference/blob/main/LICENSE) for more information.
+Geo Inference is released under the Open Government License - Canada. See [`LICENSE`](https://github.com/NRCan/geo-inference/blob/main/LICENSE) for more information.
 
 ## Contact
 
