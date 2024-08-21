@@ -49,6 +49,9 @@ PS C:\> python
 pip install geo-inference
 ```
 
+### Docker installation
+Alternatively, you can build the [Dockerfile](./Dockerfile) to use Geo-Inference.  
+
 ## Usage
 
 **Input:** GeoTiffs with compatible TorchScript model. For example: A pytorch model trained on high resolution geospatial imagery with the following features:
