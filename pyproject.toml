@@ -45,8 +45,7 @@ tag = true
 push = false
 
 [tool.bumpver.file_patterns]
+"VERSION" = ["{version}"]
 "pyproject.toml" = [
-    '^version = "{version}"', 
     '^current_version = "{version}"',]
 "geo_inference/__init__.py" = ["{version}"]
-
