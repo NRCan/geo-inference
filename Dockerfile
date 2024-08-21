@@ -22,33 +22,33 @@ RUN chmod 644 /usr/local/share/ca-certificates/cert.crt \
     && wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004-keyring.gpg \
     && sudo mv cuda-ubuntu2004-keyring.gpg /usr/share/keyrings/cuda-archive-keyring.gpg \
     && rm -f cuda-keyring_1.0-1_all.deb && rm -f /etc/apt/sources.list.d/cuda.list \
-    && wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -O /tmp/mamba.sh && \
-    /bin/bash /tmp/mamba.sh -b -p $CONDA_DIR && \
-    rm -rf /tmp/* && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    && wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -O /tmp/mamba.sh \
+    && /bin/bash /tmp/mamba.sh -b -p $CONDA_DIR \
+    && rm -rf /tmp/* \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV LD_LIBRARY_PATH=$CONDA_DIR/lib:$LD_LIBRARY_PATH
 
 # Create the user
-RUN useradd --create-home -s /bin/bash --no-user-group -u $USERID $USERNAME && \
-    chown $USERNAME $CONDA_DIR -R && \
-    adduser $USERNAME sudo && \
-    echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN useradd --create-home -s /bin/bash --no-user-group -u $USERID $USERNAME \
+    && chown $USERNAME $CONDA_DIR -R \
+    && adduser $USERNAME sudo \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 COPY requirements.txt .
 USER $USERNAME
 WORKDIR /home/$USERNAME/
 COPY requirements.txt . /home/$USERNAME/
-RUN cd /home/$USERNAME && \
-    conda config --set ssl_verify no && \
-    mamba create --name geo-inference && \ 
-    mamba install pip && \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir git+https://github.com/NRCan/geo-inference.git && \
-    pip install --no-cache-dir -r /home/$USERNAME/requirements.txt && \
-    pip uninstall -y pip && \
-    mamba clean --all
+RUN cd /home/$USERNAME \
+    && conda config --set ssl_verify no \
+    && mamba create --name geo-inference \ 
+    && mamba install pip \
+    && pip install --upgrade pip \
+    && pip install --no-cache-dir git+https://github.com/NRCan/geo-inference.git \
+    && pip install --no-cache-dir -r /home/$USERNAME/requirements.txt \
+    && pip uninstall -y pip \
+    && mamba clean --all
 
 
 ENV PATH=$CONDA_DIR/envs/geo-inference/bin:$PATH
