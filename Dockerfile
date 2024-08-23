@@ -18,6 +18,7 @@ RUN apt-get update \
 
 # define a non root user to run the app
 RUN useradd --create-home -s /bin/bash --no-user-group -u $USERID $USERNAME \
+    && mkdir -p $WORKDIR \
     && chown -R $USERNAME $WORKDIR
 
 # switch to non root user
