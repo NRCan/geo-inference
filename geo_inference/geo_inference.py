@@ -146,12 +146,9 @@ class GeoInference:
         """
         
         # configuring dask 
-        try:
-            config.set(scheduler='threads', num_workers=int(os.getenv('SLURM_CPUS_PER_TASK', 'Not available')) - 1)
-            config.set(pool=ThreadPool(int(os.getenv('SLURM_CPUS_PER_TASK', 'Not available')) - 1))
-        except ValueError:
-            config.set(scheduler='threads', num_workers = os.cpu_count() - 1)
-            config.set(pool=ThreadPool(os.cpu_count() -1))
+        cpu_count = len(os.sched_getaffinity(0))
+        config.set(scheduler='threads', num_workers=cpu_count - 1)
+        config.set(pool=ThreadPool(cpu_count - 1))
         
         if not isinstance(inference_input, (str, Path)):
             raise TypeError(
