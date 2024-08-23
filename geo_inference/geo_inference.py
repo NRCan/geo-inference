@@ -101,6 +101,7 @@ class GeoInference:
         inference_input: Union[Path, str],
         bands_requested: List[str] = [],
         patch_size: int = 1024,
+        workers: int = 0,
         bbox: str = None,
     ) -> None:
         
@@ -113,6 +114,7 @@ class GeoInference:
                 inference_input=inference_input,
                 bands_requested=bands_requested,
                 patch_size=patch_size,
+                workers=workers,
                 bbox=bbox
             )
             self.gc_task.cancel()
@@ -128,6 +130,7 @@ class GeoInference:
         inference_input: Union[Path, str],
         bands_requested: List[str] = [],
         patch_size: int = 1024,
+        workers: int = 0,
         bbox: str = None,
     ) -> None:
         
@@ -146,9 +149,10 @@ class GeoInference:
         """
         
         # configuring dask 
-        cpu_count = len(os.sched_getaffinity(0))
-        config.set(scheduler='threads', num_workers=cpu_count - 1)
-        config.set(pool=ThreadPool(cpu_count - 1))
+        num_workers = len(os.sched_getaffinity(0)) - 1 if workers == 0 else workers
+        print(f"running dask with {num_workers} workers")
+        config.set(scheduler='threads', num_workers=num_workers)
+        config.set(pool=ThreadPool(num_workers))
         
         if not isinstance(inference_input, (str, Path)):
             raise TypeError(
@@ -338,6 +342,7 @@ def main() -> None:
         inference_input=arguments["image"],
         bands_requested=arguments["bands_requested"],
         patch_size=arguments["patch_size"],
+        workers=arguments["workers"],
         bbox=arguments["bbox"],
     )
 
