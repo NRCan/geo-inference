@@ -413,13 +413,13 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-wd", "--work_dir", nargs=1, help="Working Directory")
 
-    parser.add_argument("-ps", "--patch_size", nargs=1, help="The Patch Size")
+    parser.add_argument("-ps", "--patch_size", type=int, nargs=1, help="The Patch Size")
 
     parser.add_argument("-v", "--vec", nargs=1, help="Vector Conversion")
 
     parser.add_argument("-mg", "--mgpu", nargs=1, help="Multi GPU")
 
-    parser.add_argument("-cls", "--classes", nargs=1, help="Inference Classes")
+    parser.add_argument("-cls", "--classes", type=int, nargs=1, help="Inference Classes")
 
     parser.add_argument("-y", "--yolo", nargs=1, help="Yolo Conversion")
 
