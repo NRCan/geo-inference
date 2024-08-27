@@ -1,24 +1,25 @@
 import os
-import time
-import torch  # type: ignore
-import logging
-import pystac  # type: ignore
-import numpy as np
-import dask.array as da
-import asyncio
 import gc
-from dask import config
-from typing import Dict  # type: ignore
-from pathlib import Path
-import rasterio  # type: ignore
-from rasterio.windows import from_bounds  # type: ignore
-from dask_image.imread import imread as dask_imread  # type: ignore
-from typing import Union, Sequence, List
-from omegaconf import ListConfig  # type: ignore
+import re
+import time
+import torch
+import pystac
+import logging
+import asyncio
+import rasterio
 import threading
+import numpy as np
 import xarray as xr
-from dask.diagnostics import ResourceProfiler, ProgressBar
+from typing import Dict
+from dask import config
+import dask.array as da
+from pathlib import Path
+from omegaconf import ListConfig 
+from rasterio.windows import from_bounds
+from typing import Union, Sequence, List
+from dask.diagnostics import ProgressBar
 from multiprocessing.pool import ThreadPool
+
 
 from .utils.helpers import (
     cmd_interface,
@@ -30,6 +31,7 @@ from .utils.helpers import (
 )
 from .geo_dask import (
     runModel,
+    read_zarr_metadata,
     sum_overlapped_chunks,
 )
 
@@ -177,15 +179,16 @@ class GeoInference:
         prefix_base_name = (
             base_name if not base_name.endswith(".tif") else base_name[:-4]
         )
+        prefix_base_name = (
+            prefix_base_name if not prefix_base_name.endswith(".zarr") else base_name[:-5]
+        )
         mask_path = self.work_dir.joinpath(prefix_base_name + "_mask.tif")
         polygons_path = self.work_dir.joinpath(prefix_base_name + "_polygons.geojson")
         yolo_csv_path = self.work_dir.joinpath(prefix_base_name + "_yolo.csv")
         coco_json_path = self.work_dir.joinpath(prefix_base_name + "_coco.json")
         stride_patch_size = int(patch_size / 2)
-
         """ Processing starts"""
         start_time = time.time()
-        import rioxarray # type: ignore
         try:
             raster_stac_item = False
             if isinstance(inference_input, pystac.Item):
@@ -197,10 +200,18 @@ class GeoInference:
                 except Exception:
                     raster_stac_item = False
             if not raster_stac_item:
-                with rasterio.open(inference_input, "r") as src:
-                    self.raster_meta = src.meta
-                    self.raster = src
-                aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=stride_patch_size)
+                inference_input_path = Path(inference_input)
+                self.json = None
+                if os.path.splitext(inference_input_path)[1].lower() == ".zarr":
+                    aoi_dask_array = da.from_zarr(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
+                    meta_data_json = re.sub(r'\.zarr$', '', inference_input)
+                    self.json = read_zarr_metadata(f"{meta_data_json}.json")
+                else:
+                    with rasterio.open(inference_input, "r") as src:
+                        self.raster_meta = src.meta
+                        self.raster = src
+                    import rioxarray
+                    aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
                 try:
                     if bands_requested:
                         raster_bands_request = [int(b) for b in bands_requested.split(",")]
@@ -208,10 +219,16 @@ class GeoInference:
                             len(raster_bands_request) != 0
                             and len(raster_bands_request) != aoi_dask_array.shape[0]
                         ):
-                            aoi_dask_array = xr.concat(
-                                [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
-                                dim="band"
-                            )
+                            if self.json is None:
+                                aoi_dask_array = xr.concat(
+                                    [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
+                                    dim="band"
+                                )
+                            else:
+                                aoi_dask_array = da.stack(
+                                    [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
+                                    axis =0,
+                                )
                 except Exception as e:
                     raise e
             else:
@@ -229,7 +246,7 @@ class GeoInference:
                         self.raster_meta = src.meta
                         self.raster = src
                     for key, value in bands_requested.items():
-                        all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=stride_patch_size))
+                        all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=(1, stride_patch_size, stride_patch_size)))
                 aoi_dask_array = xr.concat(all_bands_requested, dim="band")
                 del all_bands_requested
 
@@ -255,13 +272,11 @@ class GeoInference:
             pad_width = (
                 stride_patch_size - aoi_dask_array.shape[2] % stride_patch_size
             ) % stride_patch_size
-            print(aoi_dask_array.shape[0])
             aoi_dask_array = da.pad(
-                aoi_dask_array.data,
+                aoi_dask_array.data if self.json is None else aoi_dask_array,
                 ((0, 0), (0, pad_height), (0, pad_width)),
                 mode="constant",
             ).rechunk((aoi_dask_array.shape[0], stride_patch_size, stride_patch_size))
-
 
             # run the model
             aoi_dask_array = aoi_dask_array.map_overlap(
@@ -293,14 +308,13 @@ class GeoInference:
                 dtype=np.uint8,
             )
             
-        
-            with ResourceProfiler(dt=1) as prof:
-                with ProgressBar() as pbar:
-                    pbar.register()
-                    import rioxarray
-                    logger.info("Inference is running:")
-                    aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"),attrs=xarray_profile_info(self.raster))
-                    aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
+            
+            with ProgressBar() as pbar:
+                pbar.register()
+                import rioxarray
+                logger.info("Inference is running:")
+                aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster))
+                aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
                 
             total_time = time.time() - start_time
             if self.mask_to_vec:
