@@ -78,7 +78,7 @@ geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <pa
 - `-m`, `--model`: Path or URL to the model file
 - `-wd`, `--work_dir`: Working Directory
 - `-ps`, `--patch_size`: The patch Size, the size of dask chunks, Default = 1024
-- `-w`, `--workers`: Numbers of workers used by dask, Default = Nb of cores available on the host, minus 1
+- `-w`, `--workers`: Number of workers used by dask, Default = Nb of cores available on the host, minus 1
 - `-v`, `--vec`: Vector Conversion
 - `-y`, `--yolo`: Yolo Conversion
 - `-c`, `--coco`: Coco Conversion
