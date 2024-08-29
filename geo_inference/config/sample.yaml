@@ -1,8 +1,8 @@
 arguments:
-  image: "./NB_PointEscuminac_WV02_20220615_A-017161374010_01_P001-WV02-R-G-B_clahe25.tif"
-  model: ./deep_learning_model/4cls_RGB_5_1_2_3_scripted.pt   # Name of Extraction Model: str
+  image: "/gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/dask_geo_deep_learning/dask_geo_inference/performance_track/SK6-017108902010_01_P001-WV03_red-green-blue_clahe25.tif"
+  model: /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/deep_learning_model/4cls_RGB_5_1_2_3_scripted.pt   # Name of Extraction Model: str
   bbox: None                      # "minx, miny, maxx, maxy" 
-  work_dir: ./dask_geo_deep_learning/dask_geo_inference   # Working Directory: str
+  work_dir: /gpfs/fs5/nrcan/nrcan_geobase/work/dev/datacube/parallel/dask_geo_deep_learning/dask_geo_inference   # Working Directory: str
   bands_requested: '1,2,3'                  # requested Bands
   workers: 0
   vec: False                      # Vector Coversion: bool 
@@ -13,4 +13,5 @@ arguments:
   gpu_id: 0
   mgpu: False
   classes : 5
+  prediction_thr : 0.3
   patch_size: 1024

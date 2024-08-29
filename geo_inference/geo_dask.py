@@ -196,6 +196,7 @@ def runModel(
 def sum_overlapped_chunks(
     aoi_chunk: np.ndarray,
     chunk_size: int,
+    prediction_threshold : float = 0.3,
     block_info=None,
 ):
     """
@@ -299,7 +300,7 @@ def sum_overlapped_chunks(
                 if final_result.shape[0] == 1:
                     final_result = expit(final_result)
                     final_result = (
-                        np.where(final_result > 0.5, 1, 0).squeeze(0).astype(np.uint8)
+                        np.where(final_result > prediction_threshold, 1, 0).squeeze(0).astype(np.uint8)
                     )
                 else:
                     final_result = np.argmax(final_result, axis=0).astype(np.uint8)

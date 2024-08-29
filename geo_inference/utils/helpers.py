@@ -429,8 +429,10 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-d", "--device", nargs=1, help="CPU or GPU Device")
 
-    parser.add_argument("-id", "--gpu_id", nargs=1, help="GPU ID, Default = 0")
-
+    parser.add_argument("-id", "--gpu_id", nargs=1, help="GPU ID", Default = 0)
+    
+    parser.add_argument("-pr", "--prediction_thr", nargs=1, help="Prediction Threshold", Default = 0.3)
+    
     args = parser.parse_args()
 
     if args.args:
@@ -449,6 +451,7 @@ def cmd_interface(argv=None):
         multi_gpu = config["arguments"]["mgpu"]
         classes = config["arguments"]["classes"]
         patch_size = config["arguments"]["patch_size"]
+        prediction_threshold = config["arguments"]["prediction_thr"]
     elif args.image:
         image =args.image[0]
         model = args.model[0] if args.model else None
@@ -464,6 +467,7 @@ def cmd_interface(argv=None):
         multi_gpu = args.mgpu[0] if args.mgpu else False
         classes = args.classes[0] if args.classes else 5
         patch_size = args.patch_size[0] if args.patch_size else 1024 
+        prediction_threshold = args.prediction_thr[0] if args.prediction_thr else 0.3
     else:
         print("use the help [-h] option for correct usage")
         raise SystemExit
@@ -482,6 +486,7 @@ def cmd_interface(argv=None):
         "device": device,
         "gpu_id": gpu_id,
         "patch_size": patch_size,
+        "prediction_threshold": prediction_threshold,
     }
     return arguments
 

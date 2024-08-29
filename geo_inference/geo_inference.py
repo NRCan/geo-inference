@@ -79,6 +79,7 @@ class GeoInference:
         multi_gpu: bool = False,
         gpu_id: int = 0,
         num_classes: int = 5,
+        prediction_threshold : float = 0.3,
     ):
         self.work_dir: Path = get_directory(work_dir)
         self.device = (
@@ -95,6 +96,7 @@ class GeoInference:
         self.mask_to_coco = mask_to_coco
         self.mask_to_yolo = mask_to_yolo
         self.classes = num_classes
+        self.prediction_threshold = prediction_threshold
         self.raster_meta = None
 
     @torch.no_grad()
@@ -284,6 +286,7 @@ class GeoInference:
                 model=self.model,
                 patch_size=patch_size,
                 device=self.device,
+                num_classes=self.classes,
                 chunks=(
                     self.classes + 1,
                     patch_size,
@@ -297,6 +300,7 @@ class GeoInference:
             aoi_dask_array = aoi_dask_array.map_overlap(
                 sum_overlapped_chunks,
                 chunk_size=patch_size,
+                prediction_threshold = self.prediction_threshold,
                 drop_axis=0,
                 chunks=(
                     stride_patch_size,
@@ -307,7 +311,6 @@ class GeoInference:
                 boundary="none",
                 dtype=np.uint8,
             )
-            
             
             with ProgressBar() as pbar:
                 pbar.register()
@@ -351,6 +354,7 @@ def main() -> None:
         device=arguments["device"],
         gpu_id=arguments["gpu_id"],
         num_classes=arguments["classes"],
+        prediction_threshold=arguments["prediction_threshold"]
     )
     geo_inference(
         inference_input=arguments["image"],
