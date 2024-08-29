@@ -56,7 +56,7 @@ def test_read_yaml(test_data_dir):
                                    "bands_requested": '1,2,3',
                                     "mgpu": False,
                                     "classes": 5,
-                                    "prediction_threshold": 0.3,
+                                    "prediction_thr": 0.3,
                                     "n_workers": 20
                                    }
 
