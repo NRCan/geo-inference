@@ -431,7 +431,7 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-id", "--gpu_id", nargs=1, help="GPU ID", default = 0)
     
-    parser.add_argument("-pr", "--prediction_thr", nargs=1, help="Prediction Threshold", default = 0.3)
+    parser.add_argument("-pr", "--prediction_thr", type=float, nargs=1, help="Prediction Threshold")
     
     args = parser.parse_args()
 
