@@ -141,7 +141,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         
-        produced_result = code.sum_overlapped_chunks(arr, 4, mock_block_info_top_edge)
+        produced_result = code.sum_overlapped_chunks(arr, 4, 0.3, mock_block_info_top_edge)
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
@@ -162,7 +162,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         produced_result = code.sum_overlapped_chunks(
-            arr, 4, mock_block_info_top_right_corner
+            arr, 4, 0.3, mock_block_info_top_right_corner
         )
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
@@ -183,7 +183,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         produced_result = code.sum_overlapped_chunks(
-            arr, 4, mock_block_info_top_left_corner
+            arr, 4, 0.3, mock_block_info_top_left_corner
         )
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
@@ -206,7 +206,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         produced_result = code.sum_overlapped_chunks(
-            arr, 4, mock_block_info_bottom_right_corner
+            arr, 4, 0.3, mock_block_info_bottom_right_corner
         )
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
@@ -227,7 +227,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         produced_result = code.sum_overlapped_chunks(
-            arr, 4, mock_block_info_bottom_left_corner
+            arr, 4, 0.3, mock_block_info_bottom_left_corner
         )
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
@@ -251,7 +251,7 @@ class TestSumOverlappedChunks:
         )
         
         produced_result = code.sum_overlapped_chunks(
-            arr, 4, mock_block_info_bottom_edge
+            arr, 4, 0.3, mock_block_info_bottom_edge
         )
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
@@ -274,7 +274,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         
-        produced_result = code.sum_overlapped_chunks(arr, 4, mock_block_info_right_edge)
+        produced_result = code.sum_overlapped_chunks(arr, 4, 0.3, mock_block_info_right_edge)
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
 
@@ -296,7 +296,7 @@ class TestSumOverlappedChunks:
             where=arr[:-1, :2, :2] != 0,
         )
         
-        produced_result = code.sum_overlapped_chunks(arr, 4, mock_block_info_left_edge)
+        produced_result = code.sum_overlapped_chunks(arr, 4, 0.3, mock_block_info_left_edge)
         np.testing.assert_array_almost_equal(
             np.argmax(expected_result, axis=0), produced_result,decimal=2)
 

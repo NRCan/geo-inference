@@ -56,6 +56,7 @@ def test_read_yaml(test_data_dir):
                                    "bands_requested": '1,2,3',
                                     "mgpu": False,
                                     "classes": 5,
+                                    "prediction_thr": 0.3,
                                     "n_workers": 20
                                    }
 
@@ -143,6 +144,7 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
                       "gpu_id": 0,
                       "classes": 5,
                       "multi_gpu": False,
+                      "prediction_threshold": 0.3,
                       "patch_size": 1024
                       }
 
@@ -166,6 +168,7 @@ def test_cmd_interface_with_image(monkeypatch):
         "device": "gpu",
         "gpu_id": 0,
         "classes": 5,
+        "prediction_threshold": 0.3,
         "multi_gpu": False,
     }
 
