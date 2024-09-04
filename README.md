@@ -70,7 +70,7 @@ geo_inference -a <args>
 ```
 - `-a`, `--args`: Path to arguments stored in yaml, consult ./config/sample_config.yaml
 ```bash
-geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <patch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu>
+geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <patch_size> -v <vec> -d <device> -id <gpu_id> -cls <classes> -mg <mgpu> -pr <pr_thr>
 ```
 - `-i`, `--image`: Path to Geotiff
 - `-bb`, `--bbox`: AOI bbox in this format "minx, miny, maxx, maxy" (Optional)
@@ -86,6 +86,7 @@ geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <pa
 - `-id`, `--gpu_id`: GPU ID, Default = 0
 - `-cls`, `--classes`: The number of classes that model outputs, Default = 5
 - `-mg`, `--mgpu`: Whether to use multi-gpu processing or not, Default = False
+- `-pr`, `--prediction_thr` : Prediction probability Threshold (fraction of 1) to use. Default = 0.3
 
 
 You can also use the `-h` option to get a list of supported arguments:
@@ -102,29 +103,38 @@ from geo_inference.geo_inference import GeoInference
 geo_inference = GeoInference(
     model="/path/to/segformer_B5.pt",
     work_dir="/path/to/work/dir",
-    patch_size=1024,
     mask_to_vec=False,
     mask_to_yolo=False,
     mask_to_coco=False, 
     device="gpu",
     multi_gpu=False,
     gpu_id=0, 
-    num_classes=5
+    num_classes=5,
+    prediction_threshold=0.3
 )
 
 # Perform feature extraction on a TIFF image
 image_path = "/path/to/image.tif"
+bands_requested = [1,2,3]
+patch_size = 1024
+workers = 0
 patch_size = 512
-geo_inference(tiff_image = image_path,  bands_requested = bands_requested, patch_size = patch_size)
+bbox = "0, 0, 1000, 1000"
+geo_inference(
+    inference_input = image_path,  
+    bands_requested = bands_requested, 
+    patch_size = patch_size, 
+    workers = workers, 
+    bbox=bbox
+)
 ```
 
 ## Parameters
 
-The `GeoInference` class takes the following parameters:
+Initiating the `GeoInference` class takes the following parameters:
 
 - `model`: The path or URL to the model file (.pt for PyTorch models) to use for feature extraction.
 - `work_dir`: The path to the working directory. Default is `"~/.cache"`.
-- `patch_size`: The patch size to use for feature extraction. Default is `1024`.
 - `mask_to_vec`: If set to `"True"`, vector data will be created from mask. Default is `"False"`
 - `mask_to_yolo`: If set to `"True"`, vector data will be converted to YOLO format. Default is `"False"`
 - `mask_to_coco`: If set to `"True"`, vector data will be converted to COCO format. Default is `"False"`
@@ -132,6 +142,16 @@ The `GeoInference` class takes the following parameters:
 - `multi_gpu`: If set to `"True"`, uses multi-gpu for running the inference. Default is `"False"`
 - `gpu_id`: The ID of the GPU to use for feature extraction. Default is `0`.
 - `num_classes`: The number of classes that the TorchScript model outputs. Default is `5`.
+- `prediction_threshold`: Prediction probability Threshold (fraction of 1) to use. Default is `0.3`.  
+
+Calling the GeoInference object takes the following parameters:  
+- `inference_input`: Path to Geotiff. 
+- `bands_requested`: The requested bands from provided Geotiff (if not provided, it uses all bands).
+- `patch_size`: The patch size to use for feature extraction. Default is `1024`.
+- `workers`: Number of workers used by Dask, Default is `0` = Number of cores available on the host, minus 1.
+- `bbox`: AOI bbox in this format "minx, miny, maxx, maxy", in the image's crs. Default is `None`.
+
+
 ## Output
 
 The `GeoInference` class outputs the following files:
