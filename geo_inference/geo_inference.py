@@ -1,6 +1,7 @@
 import os
 import gc
 import re
+import sys
 import time
 import torch
 import pystac
@@ -17,7 +18,7 @@ from pathlib import Path
 from omegaconf import ListConfig 
 from rasterio.windows import from_bounds
 from typing import Union, Sequence, List
-from dask.diagnostics import ProgressBar
+ffrom dask.diagnostics import ProgressBar
 from multiprocessing.pool import ThreadPool
 
 
@@ -38,6 +39,7 @@ from .geo_dask import (
 from .utils.polygon import gdf_to_yolo, mask_to_poly_geojson, geojson2coco
 
 logger = logging.getLogger(__name__)
+
 
 
 class GeoInference:
@@ -114,7 +116,7 @@ class GeoInference:
             # Start the periodic garbage collection task
             self.gc_task = asyncio.create_task(self.constant_gc(5))  # Calls gc.collect() every 5 seconds
             # Run the main computation asynchronously
-            mask_layer_name = await self.async_run_inference(
+            self.mask_layer_name = await self.async_run_inference(
                 inference_input=inference_input,
                 bands_requested=bands_requested,
                 patch_size=patch_size,
@@ -126,11 +128,11 @@ class GeoInference:
             try:
                 await self.gc_task
             except asyncio.CancelledError:
-                logger.info("The End of Inference")
-            
-            return mask_layer_name
+                pass
         
-        mask_layer_name = asyncio.run(run_async())
+        asyncio.run(run_async())
+        return self.mask_layer_name
+        
 
     async def async_run_inference(self,
         inference_input: Union[Path, str],
@@ -361,13 +363,14 @@ def main() -> None:
         num_classes=arguments["classes"],
         prediction_threshold=arguments["prediction_threshold"]
     )
-    geo_inference(
+    inference_mask_layer_name = geo_inference(
         inference_input=arguments["image"],
         bands_requested=arguments["bands_requested"],
         patch_size=arguments["patch_size"],
         workers=arguments["workers"],
         bbox=arguments["bbox"],
     )
+    
 
 
 if __name__ == "__main__":
