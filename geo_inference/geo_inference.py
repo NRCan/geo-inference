@@ -114,7 +114,7 @@ class GeoInference:
             # Start the periodic garbage collection task
             self.gc_task = asyncio.create_task(self.constant_gc(5))  # Calls gc.collect() every 5 seconds
             # Run the main computation asynchronously
-            await self.async_run_inference(
+            mask_layer_name = await self.async_run_inference(
                 inference_input=inference_input,
                 bands_requested=bands_requested,
                 patch_size=patch_size,
@@ -127,8 +127,10 @@ class GeoInference:
                 await self.gc_task
             except asyncio.CancelledError:
                 logger.info("The End of Inference")
+            
+            return mask_layer_name
         
-        asyncio.run(run_async())
+        mask_layer_name = asyncio.run(run_async())
 
     async def async_run_inference(self,
         inference_input: Union[Path, str],
@@ -189,6 +191,8 @@ class GeoInference:
         yolo_csv_path = self.work_dir.joinpath(prefix_base_name + "_yolo.csv")
         coco_json_path = self.work_dir.joinpath(prefix_base_name + "_coco.json")
         stride_patch_size = int(patch_size / 2)
+        
+
         """ Processing starts"""
         start_time = time.time()
         try:
@@ -332,6 +336,7 @@ class GeoInference:
                 )
             )
             torch.cuda.empty_cache()
+            return mask_path.name
 
         except Exception as e:
             print(f"Processing on the Dask cluster failed due to: {e}")
