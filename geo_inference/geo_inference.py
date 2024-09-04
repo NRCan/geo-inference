@@ -18,7 +18,7 @@ from pathlib import Path
 from omegaconf import ListConfig 
 from rasterio.windows import from_bounds
 from typing import Union, Sequence, List
-ffrom dask.diagnostics import ProgressBar
+from dask.diagnostics import ProgressBar
 from multiprocessing.pool import ThreadPool
 
 
