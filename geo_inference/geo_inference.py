@@ -108,7 +108,7 @@ class GeoInference:
         patch_size: int = 1024,
         workers: int = 0,
         bbox: str = None,
-    ) -> None:
+    ) -> str:
         
         async def run_async():
             
