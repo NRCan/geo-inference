@@ -57,6 +57,7 @@ class GeoInference:
         multi_gpu (bool): Whether to run the inference on multi-gpu or not.
         gpu_id (int): The ID of the GPU to use for inference (if device is "gpu").
         num_classes (int) : The number of classes in the output of the model.
+        prediction_threshold (float): Prediction probability Threshold (fraction of 1) to use.
 
     Attributes:
         work_dir (Path): The directory where the model and output files will be saved.
@@ -109,7 +110,7 @@ class GeoInference:
         patch_size: int = 1024,
         workers: int = 0,
         bbox: str = None,
-    ) -> None:
+    ) -> str:
         
         async def run_async():
             
@@ -149,6 +150,7 @@ class GeoInference:
             inference_input Union[Path, str]: The path/url to the geospatial image to perform inference on.
             bands_requested List[str]: The requested bands to consider for the inference.
             patch_size (int): The size of the patches to use for inference.
+            workers (int): Number of workers used by dask, Default = Nb of cores available on the host, minus 1.
             bbox (str): The bbox or extent of the image in this format "minx, miny, maxx, maxy".
 
         Returns:
