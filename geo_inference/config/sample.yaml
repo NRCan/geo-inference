@@ -9,6 +9,7 @@ arguments:
   vec: False                      # Vector Conversion: bool 
   yolo: False                     # YOLO Conversion: bool
   coco: False                     # COCO Conversion: bool
+  transformers : True
   device: "gpu"                   # cpu or gpu: str
   gpu_id: 0
   mgpu: False

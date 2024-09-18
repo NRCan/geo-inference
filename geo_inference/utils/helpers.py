@@ -433,6 +433,8 @@ def cmd_interface(argv=None):
     
     parser.add_argument("-pr", "--prediction_thr", type=float, nargs=1, help="Prediction Threshold")
     
+    parser.add_argument("-tr", "--transformers", nargs=1, help="Transformers Addition")
+    
     args = parser.parse_args()
 
     if args.args:
@@ -452,6 +454,8 @@ def cmd_interface(argv=None):
         classes = config["arguments"]["classes"]
         patch_size = config["arguments"]["patch_size"]
         prediction_threshold = config["arguments"]["prediction_thr"]
+        transformers = config["arguments"]["transformers"]
+
     elif args.image:
         image =args.image[0]
         model = args.model[0] if args.model else None
@@ -468,6 +472,8 @@ def cmd_interface(argv=None):
         classes = args.classes[0] if args.classes else 5
         patch_size = args.patch_size[0] if args.patch_size else 1024 
         prediction_threshold = args.prediction_thr[0] if args.prediction_thr else 0.3
+        transformers = args.transformers[0] if args.transformers else False
+    
     else:
         print("use the help [-h] option for correct usage")
         raise SystemExit
@@ -487,6 +493,7 @@ def cmd_interface(argv=None):
         "gpu_id": gpu_id,
         "patch_size": patch_size,
         "prediction_threshold": prediction_threshold,
+        "transformers": transformers,
     }
     return arguments
 

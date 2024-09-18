@@ -83,6 +83,7 @@ class GeoInference:
         gpu_id: int = 0,
         num_classes: int = 5,
         prediction_threshold : float = 0.3,
+        transformers : bool = False,
     ):
         self.work_dir: Path = get_directory(work_dir)
         self.device = (
@@ -95,6 +96,8 @@ class GeoInference:
             ),
             map_location=self.device,
         )
+        if transformers:
+            self.model = tta.SegmentationTTAWrapper(self.model, tta.aliases.d4_transform(), merge_mode='mean')
         self.mask_to_vec = mask_to_vec
         self.mask_to_coco = mask_to_coco
         self.mask_to_yolo = mask_to_yolo
@@ -363,7 +366,8 @@ def main() -> None:
         device=arguments["device"],
         gpu_id=arguments["gpu_id"],
         num_classes=arguments["classes"],
-        prediction_threshold=arguments["prediction_threshold"]
+        prediction_threshold=arguments["prediction_threshold"],
+        transformers=arguments["transformers"],
     )
     inference_mask_layer_name = geo_inference(
         inference_input=arguments["image"],
