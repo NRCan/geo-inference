@@ -100,23 +100,21 @@ class GeoInference:
             map_location=self.device,
         )
         if transformers:
-            
-            if transformer_flip and not transformer_rotate:
+            if transformer_flip and transformer_rotate:    # do all
+                transforms = tta.aliases.d4_transform()
+            elif transformer_rotate:                       # do rotate only
+                transforms = tta.Compose(
+                    [
+                        tta.Rotate90(angles=[90]),
+                    ]
+                )
+            elif transformer_flip:                         # do flip only
                 transforms = tta.Compose(
                     [
                         tta.HorizontalFlip(),
                         tta.VerticalFlip(),
                     ]
                 )
-            elif not transformer_flip and transformer_rotate:
-                transforms = tta.Compose(
-                    [
-                        tta.Rotate90(angles=[90]),
-                    ]
-                )
-            elif transformer_flip and transformer_rotate:
-                transforms = tta.aliases.d4_transform()
-            
             self.model = tta.SegmentationTTAWrapper(self.model, transforms, merge_mode='mean')
         self.mask_to_vec = mask_to_vec
         self.mask_to_coco = mask_to_coco
