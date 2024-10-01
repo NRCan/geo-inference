@@ -10,6 +10,8 @@ arguments:
   yolo: False                     # YOLO Conversion: bool
   coco: False                     # COCO Conversion: bool
   transformers : True
+  transformer_flip : False
+  transformer_rotate : True
   device: "gpu"                   # cpu or gpu: str
   gpu_id: 0
   mgpu: False

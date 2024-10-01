@@ -434,6 +434,8 @@ def cmd_interface(argv=None):
     parser.add_argument("-pr", "--prediction_thr", type=float, nargs=1, help="Prediction Threshold")
     
     parser.add_argument("-tr", "--transformers", nargs=1, help="Transformers Addition")
+    parser.add_argument("-tr_f", "--transformer_flip", nargs=1, help="Transformers Addition - Flip")
+    parser.add_argument("-tr_e", "--transformer_rotate", nargs=1, help="Transformers Addition - Rotate")
     
     args = parser.parse_args()
 
@@ -455,6 +457,8 @@ def cmd_interface(argv=None):
         patch_size = config["arguments"]["patch_size"]
         prediction_threshold = config["arguments"]["prediction_thr"]
         transformers = config["arguments"]["transformers"]
+        transformer_flip = config["arguments"]["transformer_flip"]
+        transformer_rotate = config["arguments"]["transformer_rotate"]
 
     elif args.image:
         image =args.image[0]
@@ -473,6 +477,8 @@ def cmd_interface(argv=None):
         patch_size = args.patch_size[0] if args.patch_size else 1024 
         prediction_threshold = args.prediction_thr[0] if args.prediction_thr else 0.3
         transformers = args.transformers[0] if args.transformers else False
+        transformer_flip = args.transformer_flip if args.transformer_flip else False
+        transformer_rotate = args.transformer_rotate if args.transformer_rotate else False
     
     else:
         print("use the help [-h] option for correct usage")
@@ -494,6 +500,8 @@ def cmd_interface(argv=None):
         "patch_size": patch_size,
         "prediction_threshold": prediction_threshold,
         "transformers": transformers,
+        "transformer_flip": transformer_flip,
+        "transformer_rotate":transformer_rotate,
     }
     return arguments
 
