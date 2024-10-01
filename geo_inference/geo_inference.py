@@ -11,7 +11,7 @@ import rasterio
 import threading
 import numpy as np
 import xarray as xr
-from ttach import tta
+import ttach as tta
 from typing import Dict
 from dask import config
 import dask.array as da
