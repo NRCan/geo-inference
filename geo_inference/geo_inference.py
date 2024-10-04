@@ -11,6 +11,7 @@ import rasterio
 import threading
 import numpy as np
 import xarray as xr
+import ttach as tta
 from typing import Dict
 from dask import config
 import dask.array as da
@@ -83,6 +84,9 @@ class GeoInference:
         gpu_id: int = 0,
         num_classes: int = 5,
         prediction_threshold : float = 0.3,
+        transformers : bool = False,
+        transformer_flip: bool = False,
+        transformer_rotate: bool = False,
     ):
         self.work_dir: Path = get_directory(work_dir)
         self.device = (
@@ -95,6 +99,23 @@ class GeoInference:
             ),
             map_location=self.device,
         )
+        if transformers:
+            if transformer_flip and transformer_rotate:    # do all
+                transforms = tta.aliases.d4_transform()
+            elif transformer_rotate:                       # do rotate only
+                transforms = tta.Compose(
+                    [
+                        tta.Rotate90(angles=[90]),
+                    ]
+                )
+            elif transformer_flip:                         # do flip only
+                transforms = tta.Compose(
+                    [
+                        tta.HorizontalFlip(),
+                        tta.VerticalFlip(),
+                    ]
+                )
+            self.model = tta.SegmentationTTAWrapper(self.model, transforms, merge_mode='mean')
         self.mask_to_vec = mask_to_vec
         self.mask_to_coco = mask_to_coco
         self.mask_to_yolo = mask_to_yolo
@@ -363,7 +384,10 @@ def main() -> None:
         device=arguments["device"],
         gpu_id=arguments["gpu_id"],
         num_classes=arguments["classes"],
-        prediction_threshold=arguments["prediction_threshold"]
+        prediction_threshold=arguments["prediction_threshold"],
+        transformers=arguments["transformers"],
+        transformer_flip=arguments["transformer_flip"],
+        transformer_rotate=arguments["transformer_rotate"],
     )
     inference_mask_layer_name = geo_inference(
         inference_input=arguments["image"],
@@ -372,6 +396,7 @@ def main() -> None:
         workers=arguments["workers"],
         bbox=arguments["bbox"],
     )
+    print(inference_mask_layer_name)
     
 
 

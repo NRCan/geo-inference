@@ -14,4 +14,7 @@ arguments:
   classes : 5
   n_workers: 20
   prediction_thr : 0.3
+  transformers: False
+  transformer_flip : False
+  transformer_rotate : False
   patch_size: 1024
