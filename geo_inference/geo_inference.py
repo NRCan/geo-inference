@@ -59,6 +59,9 @@ class GeoInference:
         gpu_id (int): The ID of the GPU to use for inference (if device is "gpu").
         num_classes (int) : The number of classes in the output of the model.
         prediction_threshold (float): Prediction probability Threshold (fraction of 1) to use.
+        transformers (bool): Allow Test-time augmentations.
+        transformer_flip (bool): Perform horizontal and vertical flips.
+        transformer_rotate (bool): Perform 90 degree rotation.
 
     Attributes:
         work_dir (Path): The directory where the model and output files will be saved.

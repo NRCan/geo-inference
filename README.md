@@ -87,6 +87,9 @@ geo_inference -i <image> -br <bands_requested> -m <model> -wd <work_dir> -ps <pa
 - `-cls`, `--classes`: The number of classes that model outputs, Default = 5
 - `-mg`, `--mgpu`: Whether to use multi-gpu processing or not, Default = False
 - `-pr`, `--prediction_thr` : Prediction probability Threshold (fraction of 1) to use. Default = 0.3
+- `-tr`, `--transformers`: Allow Test-time augmentations.  
+- `tr_f`, `transformer_flip`: Perform horizontal and vertical flips.  
+- `tr_e`, `transformer_rotate`: perform 90 degree rotation.  
 
 
 You can also use the `-h` option to get a list of supported arguments:
@@ -110,7 +113,10 @@ geo_inference = GeoInference(
     multi_gpu=False,
     gpu_id=0, 
     num_classes=5,
-    prediction_threshold=0.3
+    prediction_threshold=0.3,
+    transformers=True,
+    transformer_flip=False,
+    transformer_rotate=True,
 )
 
 # Perform feature extraction on a TIFF image
@@ -143,6 +149,9 @@ Initiating the `GeoInference` class takes the following parameters:
 - `gpu_id`: The ID of the GPU to use for feature extraction. Default is `0`.
 - `num_classes`: The number of classes that the TorchScript model outputs. Default is `5`.
 - `prediction_threshold`: Prediction probability Threshold (fraction of 1) to use. Default is `0.3`.  
+- `transformers`: Allow Test-time augmentations.  
+- `transformer_flip`: Perform horizontal and vertical flips.  
+- `transformer_rotate`: perform 90 degree rotation.  
 
 Calling the GeoInference object takes the following parameters:  
 - `inference_input`: Path to Geotiff. 
