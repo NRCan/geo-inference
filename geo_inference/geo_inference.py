@@ -2,6 +2,7 @@ import os
 import gc
 import re
 import sys
+import platform
 import time
 import torch
 import pystac
@@ -182,8 +183,11 @@ class GeoInference:
 
         """
         
-        # configuring dask 
-        num_workers = len(os.sched_getaffinity(0)) - 1 if workers == 0 else workers
+        # configuring dask
+        if 'linux' in platform.uname().system.lower():
+            num_workers = len(os.sched_getaffinity(0)) - 1 if workers == 0 else workers
+        else:
+            num_workers = os.cpu_count() - 1 if workers == 0 else workers
         print(f"running dask with {num_workers} workers")
         config.set(scheduler='threads', num_workers=num_workers)
         config.set(pool=ThreadPool(num_workers))
