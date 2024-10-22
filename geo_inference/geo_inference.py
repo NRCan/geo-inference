@@ -290,8 +290,16 @@ class GeoInference:
                     top=bbox[3],
                     transform=self.raster_meta["transform"],
                 )
-                col_off, row_off = roi_window.col_off, roi_window.row_off
-                width, height = roi_window.width, roi_window.height
+                self.bbox_transform = from_origin(bbox[0],  # new min_x (upper-left corner x)
+                    bbox[3],  # new max_y (upper-left corner y) 
+                    self.raster_meta["transform"].a, 
+                    self.raster_meta["transform"].e if self.raster_meta["transform"].e < 0 else -1 * self.raster_meta["transform"].e
+                )
+                self.raster_meta.update({
+                    'transform': self.bbox_transform,
+                })
+                col_off, row_off = int(self.roi_window.col_off), int(self.roi_window.row_off)
+                width, height = int(self.roi_window.width), int(self.roi_window.height)
                 aoi_dask_array = aoi_dask_array[
                     :, row_off : row_off + height, col_off : col_off + width
                 ]
@@ -345,7 +353,7 @@ class GeoInference:
                 pbar.register()
                 import rioxarray
                 logger.info("Inference is running:")
-                aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster))
+                aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster, self.bbox_transform))
                 aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
                 
             total_time = time.time() - start_time
