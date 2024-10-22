@@ -230,8 +230,7 @@ def select_model_device(gpu_id: int, multi_gpu: bool):
 
 
 def xarray_profile_info(
-    raster,
-    raster_meta,
+    raster_meta
 ):
     """
     Save mask to file.
@@ -240,14 +239,14 @@ def xarray_profile_info(
     Returns:
         None
     """
-    driver = 'GTiff' if raster.driver == 'VRT' else raster.driver
+    raster_meta["driver"] = 'GTiff' if raster_meta["driver"] == 'VRT' else raster_meta["driver"]
     profile_kwargs = {
-        'crs': raster.crs.to_string(),  # Coordinate Reference System, using src.crs.to_string() to get a string representation
-        'transform': raster_meta["transform"],  # Affine transformation matrix
+        'crs': raster_meta["crs"],  # Coordinate Reference System, using src.crs.to_string() to get a string representation
+        'transform': raster_meta['transform'],  # Affine transformation matrix
         'count': 1,  # Number of bands
-        'width': raster_meta["width"],  # Width of the raster
-        'height': raster_meta["height"],  # Height of the raster
-        'driver': driver,  # Raster format driver
+        'width': raster_meta['width'],  # Width of the raster
+        'height': raster_meta['height'],  # Height of the raster
+        'driver': raster_meta["driver"],  # Raster format driver
         'dtype': "uint8",  # Data type (use dtype directly if it's a valid format for xarray)
         'BIGTIFF': 'YES',  # BigTIFF option
         'compress': 'lzw'  # Compression type
