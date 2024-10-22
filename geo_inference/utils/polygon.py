@@ -114,6 +114,10 @@ def gdf_to_yolo(geojson_path="", mask_path="", output_path="", column='value',
     except pyogrio.errors.DataSourceError as e:
         logger.error(f"Error reading GeoJSON file: {geojson_path}: {e}")
         return
+    
+    if len(gdf) == 0:
+        logger.info(f"No vector to write to yolo file.")
+        return
 
     [x0, y0, x1, y1] = [0, 0, im_size[0], im_size[1]]
     out_coords = [[x0, y0], [x0, y1], [x1, y1], [x1, y0]]
@@ -196,6 +200,11 @@ def geojson2coco(image_src, label_src, output_path=None, category_attribute="val
     except pyogrio.errors.DataSourceError as e:
         logger.error(f"Error reading GeoJSON file: {label_src}: {e}")
         return
+    
+    if len(curr_gdf) == 0:
+        logger.info(f"No vector to write to coco file.")
+        return
+
     curr_gdf['label_fname'] = label_src
     curr_gdf['image_fname'] = ''
     curr_gdf['image_id'] = 1

@@ -121,7 +121,7 @@ geo_inference = GeoInference(
 
 # Perform feature extraction on a TIFF image
 image_path = "/path/to/image.tif"
-bands_requested = [1,2,3]
+bands_requested = "1,2,3"
 patch_size = 1024
 workers = 0
 patch_size = 512
