@@ -93,9 +93,8 @@ class GeoInference:
         transformer_rotate: bool = False,
     ):
         self.work_dir: Path = get_directory(work_dir)
-        self.device = (
-            device if device == "cpu" else select_model_device(gpu_id, multi_gpu)
-        )
+        self.device = select_model_device(gpu_id, multi_gpu, device)
+        
         self.model = torch.jit.load(
             get_model(
                 model_path_or_url=model,

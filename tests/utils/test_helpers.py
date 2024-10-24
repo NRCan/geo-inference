@@ -80,7 +80,7 @@ def test_validate_asset_type(test_data_dir):
         reopened_dataset = validate_asset_type(dataset)
         assert reopened_dataset.name == dataset.name
         assert not reopened_dataset.closed
-    assert validate_asset_type(local_tiff_path).name == local_tiff_path
+    assert Path(validate_asset_type(local_tiff_path).name) == Path(local_tiff_path)
         
 def test_calculate_gpu_stats():
     with patch('torch.cuda.utilization', return_value=50), patch('torch.cuda.mem_get_info', return_value=(500, 1000)):
@@ -105,22 +105,22 @@ def test_get_device():
     with patch('geo_inference.utils.helpers.calculate_gpu_stats') as mock_calculate_gpu_stats:
         mock_calculate_gpu_stats.return_value = ({"gpu": 10}, {"used": 100, "total": 1024})
         device = select_model_device(gpu_id=1, multi_gpu=False)
-        assert device == 'cpu'
+        assert device == "cpu"
 
 def test_get_directory():
     with patch('pathlib.Path.is_dir', return_value=False), patch('pathlib.Path.mkdir'):
         assert get_directory('test') == Path('test')
 
 def test_get_model_local_file(test_data_dir):
-    model_file = test_data_dir / "inference" / "test_model" / "test_model.pt"
+    model_file = test_data_dir / "inference" / "test_model" / "cpu_scripted.pt"
     model_path = get_model(str(model_file), test_data_dir)
     assert model_path == model_file
 
 @patch('geo_inference.utils.helpers.download_file_from_url')
 def test_get_model_url(mock_download_file_from_url, test_data_dir):
     mock_download_file_from_url.return_value = None
-    model_path = get_model("https://example.com/test_model.pt", test_data_dir)
-    assert model_path == test_data_dir / "test_model.pt"
+    model_path = get_model("https://example.com/cpu_scripted.pt", test_data_dir)
+    assert model_path == test_data_dir / "cpu_scripted.pt"
     
 def test_get_model_file_not_exists(test_data_dir):
     with pytest.raises(ValueError):
