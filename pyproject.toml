@@ -28,7 +28,7 @@ version = {file = ["VERSION"]}
 dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 
 [project.urls]
-Homepage = "https://github.com/valhassan/geo-inference"
+Homepage = "https://github.com/NRCan/geo-inference"
 
 [project.scripts]
 geo_inference = "geo_inference.geo_inference:main"

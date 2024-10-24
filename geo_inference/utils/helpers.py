@@ -196,9 +196,56 @@ def get_model(model_path_or_url: str, work_dir: Path) -> Path:
             raise ValueError("Invalid model path")
 
 
-def select_model_device(gpu_id: int, multi_gpu: bool):
-    device = "cpu"
-    if torch.cuda.is_available():
+def select_model_device(gpu_id: int, multi_gpu: bool, device: str="cpu"):
+    """
+    Selects an appropriate GPU device based on memory usage and GPU utilization.
+
+    The function checks if a GPU is available using `torch.cuda.is_available()` 
+    and then evaluates either a single GPU or multiple GPUs based on the provided `multi_gpu` flag. 
+    It analyzes memory and utilization for each available GPU, and selects a device that has memory 
+    and utilization usage below a specific threshold.
+
+    Parameters:
+    -----------
+    multi_gpu : bool
+        If True, checks multiple GPUs and selects one with suitable memory and utilization stats.
+    gpu_id : int
+        The index of the GPU to evaluate when not in multi-GPU mode.    
+    device : str
+        The device string representing the current device (e.g., "cpu" or "cuda:X").
+
+    Returns:
+    --------
+    device : str
+        The updated device string, specifying which GPU to use (e.g., "cuda:0", "cuda:1", etc.), 
+        or retains the original device (e.g., "cpu") if no suitable GPU is found.
+
+    Logic:
+    ------
+    1. If a GPU is available and the device is not set to "cpu":
+        - **Single GPU Mode (multi_gpu=False)**: 
+            - Checks the specified `gpu_id`'s memory and utilization.
+            - If the memory usage is below 70% and GPU utilization is below 70%, sets the device to the appropriate GPU.
+        - **Multi-GPU Mode (multi_gpu=True)**:
+            - Iterates over all available GPUs.
+            - For each GPU, checks memory usage and utilization.
+            - Selects the first GPU that has memory and utilization below the 70% threshold.
+    2. If no GPU meets the criteria, retains the current device (usually "cpu").
+
+    Note:
+    -----
+    - Memory is calculated as the difference between total and available memory (via `torch.cuda.mem_get_info`).
+    - Both memory and GPU utilization thresholds are set to 70%.
+    - The GPU utilization is retrieved via `torch.cuda.utilization()`.
+
+    Exceptions:
+    -----------
+    - Assumes that GPU-related PyTorch functions like `torch.cuda.utilization()` and `torch.cuda.mem_get_info()` are available and accessible.
+    - GPU-related functions will fail if run in an environment without CUDA support.
+
+    """
+
+    if torch.cuda.is_available() and device != "cpu":
         if not multi_gpu:
             res = {"gpu": torch.cuda.utilization(gpu_id)}
             torch_cuda_mem = torch.cuda.mem_get_info(gpu_id)

@@ -2,6 +2,7 @@ import os
 import gc
 import re
 import sys
+import platform
 import time
 import torch
 import pystac
@@ -92,9 +93,8 @@ class GeoInference:
         transformer_rotate: bool = False,
     ):
         self.work_dir: Path = get_directory(work_dir)
-        self.device = (
-            device if device == "cpu" else select_model_device(gpu_id, multi_gpu)
-        )
+        self.device = select_model_device(gpu_id, multi_gpu, device)
+        
         self.model = torch.jit.load(
             get_model(
                 model_path_or_url=model,
@@ -182,8 +182,13 @@ class GeoInference:
 
         """
         
-        # configuring dask 
-        num_workers = len(os.sched_getaffinity(0)) - 1 if workers == 0 else workers
+        # configuring dask with proper number of workers, alternatively we could also use os.getenv('SLURM_CPUS_PER_TASK')
+        if workers != 0:
+            num_workers = workers
+        elif 'linux' in platform.uname().system.lower():
+            num_workers = len(os.sched_getaffinity(0)) - 1
+        else:
+            num_workers = os.cpu_count() - 1    
         print(f"running dask with {num_workers} workers")
         config.set(scheduler='threads', num_workers=num_workers)
         config.set(pool=ThreadPool(num_workers))
