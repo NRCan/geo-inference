@@ -298,11 +298,21 @@ class GeoInference:
                     top=bbox[3],
                     transform=self.raster_meta["transform"],
                 )
-                col_off, row_off = roi_window.col_off, roi_window.row_off
-                width, height = roi_window.width, roi_window.height
+                self.bbox_transform = from_origin(bbox[0], 
+                    bbox[3],  
+                    self.raster_meta["transform"].a, 
+                    self.raster_meta["transform"].e if self.raster_meta["transform"].e > 0 else -1 * self.raster_meta["transform"].e
+                )
+                col_off, row_off = int(self.roi_window.col_off), int(self.roi_window.row_off)
+                width, height = int(self.roi_window.width), int(self.roi_window.height)
                 aoi_dask_array = aoi_dask_array[
                     :, row_off : row_off + height, col_off : col_off + width
                 ]
+                self.raster_meta.update({
+                    'transform': self.bbox_transform,
+                    'width': aoi_dask_array.shape[2],
+                    'height': aoi_dask_array.shape[1]
+                })
             self.original_shape = aoi_dask_array.shape
             # Pad the array to make dimensions multiples of the patch size
             pad_height = (
@@ -353,7 +363,7 @@ class GeoInference:
                 pbar.register()
                 import rioxarray
                 logger.info("Inference is running:")
-                aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster))
+                aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster_meta))
                 aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
                 
             total_time = time.time() - start_time
