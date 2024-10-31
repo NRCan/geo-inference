@@ -199,7 +199,7 @@ class GeoInference:
             raise TypeError(
                 f"Invalid raster type.\nGot {inference_input} of type {type(inference_input)}"
             )
-        if not isinstance(bands_requested, (Sequence, ListConfig)):
+        if not isinstance(bands_requested, (List, ListConfig)):
             raise ValueError(
                 f"Requested bands should be a list."
                 f"\nGot {bands_requested} of type {type(bands_requested)}"
@@ -255,7 +255,6 @@ class GeoInference:
                     aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
                 try:
                     if bands_requested:
-                        # raster_bands_request = [int(b) for b in bands_requested.split(",")]
                         if (
                             len(bands_requested) != 0
                             and len(bands_requested) != aoi_dask_array.shape[0]
@@ -294,8 +293,10 @@ class GeoInference:
                 del all_bands_requested
 
             if bbox is not None:
-                bbox = tuple(map(float, bbox.split(", ")))
-                roi_window = from_bounds(
+                if not isinstance(bbox, (List, ListConfig)):
+                    raise TypeError("bbox should be a list.")
+                bbox = tuple(map(float, bbox))
+                self.roi_window = from_bounds(
                     left=bbox[0],
                     bottom=bbox[1],
                     right=bbox[2],

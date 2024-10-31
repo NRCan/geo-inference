@@ -1,6 +1,7 @@
 import os
 import pytest
 import torch
+import rasterio
 
 from geo_inference.geo_inference import GeoInference
 from pathlib import Path
@@ -55,10 +56,10 @@ class TestGeoInference:
 
     def test_call_local_tif(self, geo_inference: GeoInference, test_data_dir: Path):
         tiff_image = test_data_dir / "0.tif"
-        bbox = [60073, 6097043, 601048, 6097332]
+        bbox = [600500.0, 6097000.0, 601012.0, 6097300.0]
         patch_size = 512
         bands_requested = [1,2,3]
-        workers = 10
+        workers = 0
         # call with bbox.
         mask_name = geo_inference(
             inference_input=str(tiff_image),
@@ -69,6 +70,13 @@ class TestGeoInference:
         )
         mask_path = geo_inference.work_dir / mask_name
         assert mask_path.exists()
+
+        with rasterio.open(mask_path) as img:
+            xmin, ymin, xmax, ymax = img.bounds
+            assert round(xmin) == round(bbox[0])
+            assert round(ymin) == round(bbox[1])
+            assert round(xmax) == round(bbox[2])
+            assert round(ymax) == round(bbox[3])
         polygons_path = geo_inference.work_dir / "0_polygons.geojson"
         assert polygons_path.exists()
         os.remove(polygons_path)
