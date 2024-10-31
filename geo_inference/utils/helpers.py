@@ -449,7 +449,7 @@ def cmd_interface(argv=None):
         "-br",
         "--bands_requested",
         nargs=1,
-        help="bands_requested in this format'R,G,B'",
+        help="bands_requested in this format[R,G,B] or [1,2,3]",
     )
 
     parser.add_argument(
