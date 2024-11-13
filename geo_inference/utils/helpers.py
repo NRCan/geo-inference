@@ -449,7 +449,7 @@ def cmd_interface(argv=None):
         "-br",
         "--bands_requested",
         nargs=1,
-        help="bands_requested in this format'R,G,B'",
+        help="bands_requested in this format['Red','Green','Blue'] or [1,2,3]",
     )
 
     parser.add_argument(
@@ -490,7 +490,7 @@ def cmd_interface(argv=None):
         config = read_yaml(args.args[0])
         image = config["arguments"]["image"]
         model = config["arguments"]["model"]
-        bbox = None if config["arguments"]["bbox"].lower() == "none" else config["arguments"]["bbox"]
+        bbox = None if config["arguments"]["bbox"] == "None" else config["arguments"]["bbox"]
         work_dir = config["arguments"]["work_dir"]
         bands_requested = config["arguments"]["bands_requested"]
         workers = config["arguments"]["workers"]

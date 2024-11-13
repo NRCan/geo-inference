@@ -42,7 +42,7 @@ def test_is_tiff_url():
 def test_read_yaml(test_data_dir):
     config_path = str(test_data_dir / 'sample.yaml')
     result = read_yaml(config_path)
-    assert result["arguments"] == {"image": "./data/areial.tiff",
+    assert result["arguments"] == {"image": "./data/0.tif",
                                    "bbox": "None",
                                    "model": "rgb-4class-segformer",
                                    "work_dir": "None",
@@ -53,14 +53,13 @@ def test_read_yaml(test_data_dir):
                                    "coco": False,
                                    "device": "gpu",
                                    "gpu_id": 0,
-                                   "bands_requested": '1,2,3',
+                                   "bands_requested": [1,2,3],
                                     "mgpu": False,
                                     "classes": 5,
                                     "prediction_thr": 0.3,
                                     "transformers": False,
                                     "transformer_flip" : False,
-                                    "transformer_rotate" : False,
-                                    "n_workers": 20
+                                    "transformer_rotate" : False
                                    }
 
 def test_validate_asset_type(test_data_dir):
@@ -134,9 +133,9 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
     # Call the function
     result = cmd_interface()
 
-    assert result == {"image": "./data/areial.tiff",
+    assert result == {"image": "./data/0.tif",
                       "bbox": None,
-                      "bands_requested" : "1,2,3",
+                      "bands_requested" : [1,2,3],
                       "model": "rgb-4class-segformer",
                       "work_dir": "None",
                       "workers": 0,

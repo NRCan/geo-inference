@@ -1,6 +1,7 @@
 import os
 import pytest
 import torch
+import rasterio
 
 from geo_inference.geo_inference import GeoInference
 from pathlib import Path
@@ -53,13 +54,36 @@ class TestGeoInference:
         assert isinstance(geo_inference.model.model, torch.jit.ScriptModule)
         assert geo_inference.classes > 0
 
-    def test_call(self, geo_inference: GeoInference, test_data_dir: Path):
+    def test_call_local_tif(self, geo_inference: GeoInference, test_data_dir: Path):
         tiff_image = test_data_dir / "0.tif"
-        # bbox = '0,0,100,100'
-        bbox = None
+        bbox = [600500.0, 6097000.0, 601012.0, 6097300.0]
         patch_size = 512
-        bands_requested = "1,2,3"
-        workers = 10
+        bands_requested = [1,2,3]
+        workers = 0
+        # call with bbox.
+        mask_name = geo_inference(
+            inference_input=str(tiff_image),
+            bands_requested=bands_requested,
+            patch_size=patch_size,
+            workers=workers,
+            bbox=bbox,
+        )
+        mask_path = geo_inference.work_dir / mask_name
+        assert mask_path.exists()
+
+        with rasterio.open(mask_path) as img:
+            xmin, ymin, xmax, ymax = img.bounds
+            assert round(xmin) == round(bbox[0])
+            assert round(ymin) == round(bbox[1])
+            assert round(xmax) == round(bbox[2])
+            assert round(ymax) == round(bbox[3])
+        polygons_path = geo_inference.work_dir / "0_polygons.geojson"
+        assert polygons_path.exists()
+        os.remove(polygons_path)
+        os.remove(mask_path)
+
+        # call without bbox.
+        bbox = None
         mask_name = geo_inference(
             inference_input=str(tiff_image),
             bands_requested=bands_requested,
@@ -72,4 +96,21 @@ class TestGeoInference:
         polygons_path = geo_inference.work_dir / "0_polygons.geojson"
         assert polygons_path.exists()
         os.remove(polygons_path)
+        os.remove(mask_path)
+    
+    def test_call_stac(self, geo_inference: GeoInference, test_data_dir: Path):
+        tiff_image = r"./tests/data/stac/SpaceNet_AOI_2_Las_Vegas.json"
+        bbox = None
+        patch_size = 512
+        bands_requested = ["Red","Green","Blue"]
+        workers = 10
+        mask_name = geo_inference(
+            inference_input=str(tiff_image),
+            bands_requested=bands_requested,
+            patch_size=patch_size,
+            workers=workers,
+            bbox=bbox,
+        )
+        mask_path = geo_inference.work_dir / mask_name
+        assert mask_path.exists()
         os.remove(mask_path)
