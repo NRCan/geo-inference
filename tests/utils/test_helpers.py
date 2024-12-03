@@ -155,14 +155,14 @@ def test_cmd_interface_with_args(monkeypatch, test_data_dir):
 
 def test_cmd_interface_with_image(monkeypatch):
     # Mock the command line arguments
-    monkeypatch.setattr('sys.argv', ['prog', '-i', 'image.tif'])
+    monkeypatch.setattr('sys.argv', ['prog', '-i', 'image.tif', '-br', '1', '2', '3'])
     # Call the function
     result = cmd_interface()
     # Assert the result
     assert result == {
         "image": "image.tif",
         "bbox": None,
-        "bands_requested" : [],
+        "bands_requested" : ['1', '2', '3'],
         "workers": 0,
         "model": None,
         "work_dir": None,
