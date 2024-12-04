@@ -261,12 +261,12 @@ class GeoInference:
                         ):
                             if self.json is None:
                                 aoi_dask_array = xr.concat(
-                                    [aoi_dask_array[i - 1, :, :] for i in bands_requested],
+                                    [aoi_dask_array[int(i) - 1, :, :] for i in bands_requested],
                                     dim="band"
                                 )
                             else:
                                 aoi_dask_array = da.stack(
-                                    [aoi_dask_array[i - 1, :, :] for i in bands_requested],
+                                    [aoi_dask_array[int(i) - 1, :, :] for i in bands_requested],
                                     axis =0,
                                 )
                 except Exception as e:
