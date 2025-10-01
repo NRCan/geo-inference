@@ -298,7 +298,6 @@ def sum_overlapped_chunks(
                     where=full_array[-1, :, :] != 0,
                 )
                 if final_result.shape[0] == 1:
-                    final_result = expit(final_result)
                     final_result = (
                         np.where(final_result > prediction_threshold, 1, 0).squeeze(0).astype(np.uint8)
                     )

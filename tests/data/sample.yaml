@@ -1,6 +1,6 @@
 arguments:
-  image: "./data/areial.tiff"     # Path to Geotiff
-  bbox: None                      # "minx, miny, maxx, maxy" 
+  image: "./data/0.tif"           # Path to Geotiff
+  bbox: None                      # [minx, miny, maxx, maxy] 
   model: "rgb-4class-segformer"   # Name of Extraction Model: str
   work_dir: None                  # Working Directory: str
   vec: False                      # Vector Conversion: bool
@@ -8,11 +8,10 @@ arguments:
   coco: False                     # COCO Conversion: bool
   device: "gpu"                   # cpu or gpu: str
   gpu_id: 0                       # GPU ID: int
-  bands_requested: '1,2,3'                  # requested Bands
+  bands_requested: [1,2,3]        # requested Bands
   workers: 0
   mgpu: False
   classes : 5
-  n_workers: 20
   prediction_thr : 0.3
   transformers: False
   transformer_flip : False

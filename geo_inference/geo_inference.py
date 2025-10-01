@@ -12,6 +12,7 @@ import rasterio
 import threading
 import numpy as np
 import xarray as xr
+import rioxarray
 import ttach as tta
 from typing import Dict
 from dask import config
@@ -19,6 +20,7 @@ import dask.array as da
 from pathlib import Path
 from omegaconf import ListConfig 
 from rasterio.windows import from_bounds
+from rasterio.transform import from_origin
 from typing import Union, Sequence, List
 from dask.diagnostics import ProgressBar
 from multiprocessing.pool import ThreadPool
@@ -197,7 +199,7 @@ class GeoInference:
             raise TypeError(
                 f"Invalid raster type.\nGot {inference_input} of type {type(inference_input)}"
             )
-        if not isinstance(bands_requested, (Sequence, ListConfig)):
+        if not isinstance(bands_requested, (List, ListConfig)):
             raise ValueError(
                 f"Requested bands should be a list."
                 f"\nGot {bands_requested} of type {type(bands_requested)}"
@@ -238,9 +240,9 @@ class GeoInference:
                     raster_stac_item = True
                 except Exception:
                     raster_stac_item = False
+            self.json = None
             if not raster_stac_item:
                 inference_input_path = Path(inference_input)
-                self.json = None
                 if os.path.splitext(inference_input_path)[1].lower() == ".zarr":
                     aoi_dask_array = da.from_zarr(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
                     meta_data_json = re.sub(r'\.zarr$', '', inference_input)
@@ -249,32 +251,33 @@ class GeoInference:
                     with rasterio.open(inference_input, "r") as src:
                         self.raster_meta = src.meta
                         self.raster = src
-                    import rioxarray
+                    
                     aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
                 try:
                     if bands_requested:
-                        raster_bands_request = [int(b) for b in bands_requested.split(",")]
                         if (
-                            len(raster_bands_request) != 0
-                            and len(raster_bands_request) != aoi_dask_array.shape[0]
+                            len(bands_requested) != 0
+                            and len(bands_requested) != aoi_dask_array.shape[0]
                         ):
                             if self.json is None:
                                 aoi_dask_array = xr.concat(
-                                    [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
+                                    [aoi_dask_array[int(i) - 1, :, :] for i in bands_requested],
                                     dim="band"
                                 )
                             else:
                                 aoi_dask_array = da.stack(
-                                    [aoi_dask_array[i - 1, :, :] for i in raster_bands_request],
+                                    [aoi_dask_array[int(i) - 1, :, :] for i in bands_requested],
                                     axis =0,
                                 )
                 except Exception as e:
                     raise e
             else:
                 assets = asset_by_common_name(inference_input)
-                bands_requested = {
-                    band: assets[band] for band in bands_requested.split(",")
-                }
+                try:
+                    bands_requested = {band: assets[band.lower()] for band in bands_requested}
+                except KeyError:
+                    raise KeyError(f"Common names of the STAC assets ({assets.keys()}) do not match provided bands_requested keys ({bands_requested}).")
+
                 rio_gdal_options = {
                     "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
                     "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif",
@@ -290,8 +293,10 @@ class GeoInference:
                 del all_bands_requested
 
             if bbox is not None:
-                bbox = tuple(map(float, bbox.split(", ")))
-                roi_window = from_bounds(
+                if not isinstance(bbox, (List, ListConfig)):
+                    raise TypeError("bbox should be a list.")
+                bbox = tuple(map(float, bbox))
+                self.roi_window = from_bounds(
                     left=bbox[0],
                     bottom=bbox[1],
                     right=bbox[2],
@@ -361,7 +366,7 @@ class GeoInference:
             
             with ProgressBar() as pbar:
                 pbar.register()
-                import rioxarray
+                # import rioxarray
                 logger.info("Inference is running:")
                 aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster_meta))
                 aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())

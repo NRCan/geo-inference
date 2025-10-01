@@ -1,0 +1,250 @@
+{
+  "type": "Feature",
+  "stac_version": "1.0.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/projection/v1.0.0/schema.json",
+    "https://stac-extensions.github.io/eo/v1.0.0/schema.json"
+  ],
+  "id": "SpaceNet_AOI_2_Las_Vegas",
+  "collection": "test",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -53.1659631578073,
+          47.42365019337817
+        ],
+        [
+          -53.167569143274676,
+          47.462743080832595
+        ],
+        [
+          -53.1691785188727,
+          47.50183565900671
+        ],
+        [
+          -53.17079129363732,
+          47.540927927817044
+        ],
+        [
+          -53.17240747663812,
+          47.58001988718016
+        ],
+        [
+          -53.17402707697844,
+          47.61911153701266
+        ],
+        [
+          -53.17565010379554,
+          47.6582028772313
+        ],
+        [
+          -53.17727656626078,
+          47.697293907752794
+        ],
+        [
+          -53.17890647357976,
+          47.736384628494
+        ],
+        [
+          -53.18053983499246,
+          47.77547503937181
+        ],
+        [
+          -53.18217665977342,
+          47.81456514030315
+        ],
+        [
+          -53.18274315341038,
+          47.82807460710128
+        ],
+        [
+          -53.22072950009213,
+          47.827345731985154
+        ],
+        [
+          -53.278774162009874,
+          47.826207664203224
+        ],
+        [
+          -53.336815195757985,
+          47.82504027130873
+        ],
+        [
+          -53.39276323165151,
+          47.823887148354494
+        ],
+        [
+          -53.39269853547722,
+          47.82248011926179
+        ],
+        [
+          -53.39090339059741,
+          47.783395812804095
+        ],
+        [
+          -53.38911204395473,
+          47.74431118789802
+        ],
+        [
+          -53.38732448537806,
+          47.70522624465101
+        ],
+        [
+          -53.38554070473415,
+          47.66614098317041
+        ],
+        [
+          -53.38376069192746,
+          47.627055403563595
+        ],
+        [
+          -53.38198443690002,
+          47.58796950593788
+        ],
+        [
+          -53.3802119296312,
+          47.54888329040058
+        ],
+        [
+          -53.37844316013759,
+          47.50979675705901
+        ],
+        [
+          -53.37667811847282,
+          47.470709906020375
+        ],
+        [
+          -53.37491679472736,
+          47.43162273739196
+        ],
+        [
+          -53.37437224107312,
+          47.41952128561759
+        ],
+        [
+          -53.33461086840071,
+          47.42033831586188
+        ],
+        [
+          -53.277016005703906,
+          47.42149729651587
+        ],
+        [
+          -53.1659631578073,
+          47.42365019337817
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -53.39276323165151,
+    47.41952128561759,
+    -53.1659631578073,
+    47.82807460710128
+  ],
+  "properties": {
+    "created": "2024-08-23T02:41:12Z",
+    "updated": "2024-08-23T02:41:14.149265Z",
+    "datetime": "2023-10-30T14:25:29Z",
+    "proj:epsg": 32622,
+    "collection": "test",
+    "proj:shape": [
+      103456,
+      36184
+    ],
+    "proj:geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            336640.77805401257,
+            5254518.836411794
+          ],
+          [
+            336640.77805401257,
+            5299498.415712714
+          ],
+          [
+            320909.0554141993,
+            5299498.415712714
+          ],
+          [
+            320909.0554141993,
+            5254518.836411794
+          ],
+          [
+            336640.77805401257,
+            5254518.836411794
+          ]
+        ]
+      ]
+    },
+    "eo:cloud_cover": 0,
+    "proj:transform": [
+      320909.0554141993,
+      0.434770137072,
+      0,
+      5299498.415712714,
+      0,
+      -0.434770137072
+    ]
+  },
+  "assets": {
+    "B": {
+      "href": "./tests/data/stac/SpaceNet_AOI_2_Las_Vegas-056155973080_01_P001-WV03-B.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "roles": [
+        "data"
+      ],
+      "title": "Blue band",
+      "eo:bands": [
+        {
+          "name": "b",
+          "common_name": "blue",
+          "description": "sensor:GE01, min_wavelength_nm: 450, max_wavelength_nm: 510, orthorectified, pansharpened, downsampled to 8 bit",
+          "center_wavelength": 0.48,
+          "full_width_half_max": 0.06
+        }
+      ],
+      "description": "COG - Blue Single spectral band / COG - Bande spectrale unique Bleu"
+    },
+    "G": {
+      "href": "./tests/data/stac/SpaceNet_AOI_2_Las_Vegas-056155973080_01_P001-WV03-G.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "roles": [
+        "data"
+      ],
+      "title": "Green band",
+      "eo:bands": [
+        {
+          "name": "g",
+          "common_name": "green",
+          "description": "sensor:GE01, min_wavelength_nm: 520, max_wavelength_nm: 580, orthorectified, pansharpened, downsampled to 8 bit",
+          "center_wavelength": 0.55,
+          "full_width_half_max": 0.05999999999999994
+        }
+      ],
+      "description": "COG - Green Single spectral band / COG - Bande spectrale unique Vert"
+    },
+    "R": {
+      "href": "./tests/data/stac/SpaceNet_AOI_2_Las_Vegas-056155973080_01_P001-WV03-R.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "roles": [
+        "data"
+      ],
+      "title": "Red band",
+      "eo:bands": [
+        {
+          "name": "r",
+          "common_name": "red",
+          "description": "sensor:GE01, min_wavelength_nm: 655, max_wavelength_nm: 690, orthorectified, pansharpened, downsampled to 8 bit",
+          "center_wavelength": 0.6725,
+          "full_width_half_max": 0.03499999999999992
+        }
+      ],
+      "description": "COG - Red Single spectral band / COG - Bande spectrale unique Rouge"
+    }
+  }
+}

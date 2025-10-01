@@ -448,8 +448,8 @@ def cmd_interface(argv=None):
     parser.add_argument(
         "-br",
         "--bands_requested",
-        nargs=1,
-        help="bands_requested in this format'R,G,B'",
+        nargs="*",
+        help="bands_requested in this format '-b Red Green Blue' or '-br 1 2 3'",
     )
 
     parser.add_argument(
@@ -490,7 +490,7 @@ def cmd_interface(argv=None):
         config = read_yaml(args.args[0])
         image = config["arguments"]["image"]
         model = config["arguments"]["model"]
-        bbox = None if config["arguments"]["bbox"].lower() == "none" else config["arguments"]["bbox"]
+        bbox = None if config["arguments"]["bbox"] == "None" else config["arguments"]["bbox"]
         work_dir = config["arguments"]["work_dir"]
         bands_requested = config["arguments"]["bands_requested"]
         workers = config["arguments"]["workers"]
@@ -512,7 +512,7 @@ def cmd_interface(argv=None):
         model = args.model[0] if args.model else None
         bbox = args.bbox[0] if args.bbox else None
         work_dir = args.work_dir[0] if args.work_dir else None
-        bands_requested = args.bands_requested[0] if args.bands_requested else []
+        bands_requested = args.bands_requested if args.bands_requested else []
         workers = args.workers[0] if args.workers else 0
         vec = args.vec[0] if args.vec else False
         yolo = args.yolo[0] if args.yolo else False
