@@ -259,11 +259,13 @@ class GeoInference:
                             len(bands_requested) != 0
                         ):
                             if self.json is None:
+                                logger.info("Bands are reordeing to bands_requested:")
                                 aoi_dask_array = xr.concat(
                                     [aoi_dask_array[int(i) - 1, :, :] for i in bands_requested],
                                     dim="band"
                                 )
                             else:
+                                logger.info("Bands are reordeing to bands_requested:")
                                 aoi_dask_array = da.stack(
                                     [aoi_dask_array[int(i) - 1, :, :] for i in bands_requested],
                                     axis =0,
