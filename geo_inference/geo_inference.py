@@ -257,7 +257,6 @@ class GeoInference:
                     if bands_requested:
                         if (
                             len(bands_requested) != 0
-                            and len(bands_requested) != aoi_dask_array.shape[0]
                         ):
                             if self.json is None:
                                 aoi_dask_array = xr.concat(
