@@ -23,7 +23,6 @@ from pathlib import Path
 
 from ..config.logging_config import logger
 
-
 logger = logging.getLogger(__name__)
 
 USER_CACHE = Path.home().joinpath(".cache")

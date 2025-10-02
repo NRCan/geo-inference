@@ -1,8 +1,8 @@
 arguments:
-  image: "/gpfs/fs5/nrcan/nrcan_geobase/work/transfer/work/on_demand_mapping/GEOAI/DEV/marjan_asgari/_preprocessing_in_progress/NU_Iqaluit_WV02_20240716/NU_Iqaluit_WV02_20240716-PREP.tif"
-  model: ./deep_learning_model/4cls_RGB_5_1_2_3_scripted_tta.pt   # Name of Extraction Model: str
+  image: "./SK6-017108902010_01_P001-WV03_red-green-blue_clahe25.tif"
+  model: ./deep_learning_model/4cls_RGB_5_1_2_3_scripted.pt   # Name of Extraction Model: str
   bbox: None                      # "minx, miny, maxx, maxy" 
-  work_dir: /gpfs/fs5/nrcan/nrcan_geobase/work/transfer/work/on_demand_mapping/GEOAI/DEV/marjan_asgari/_preprocessing_in_progress/test/  
+  work_dir: ./parallel/dask_geo_deep_learning/dask_geo_inference   # Working Directory: str
   bands_requested: '1,2,3'                  # requested Bands
   workers: 0
   vec: False                      # Vector Coversion: bool 
