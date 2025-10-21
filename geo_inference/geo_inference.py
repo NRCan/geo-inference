@@ -226,6 +226,7 @@ class GeoInference:
         yolo_csv_path = self.work_dir.joinpath(prefix_base_name + "_yolo.csv")
         coco_json_path = self.work_dir.joinpath(prefix_base_name + "_coco.json")
         stride_patch_size = int(patch_size / 2)
+        self.no_data = None
         
 
         """ Processing starts"""
@@ -253,6 +254,7 @@ class GeoInference:
                         self.raster = src
                     
                     aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
+                    self.no_data = aoi_dask_array.rio.nodata
                 try:
                     if bands_requested:
                         if (
@@ -288,10 +290,15 @@ class GeoInference:
                     with rasterio.open(bands_requested[next(iter(bands_requested))]["meta"].href, "r") as src:
                         self.raster_meta = src.meta
                         self.raster = src
+                        self.no_data = src.nodata 
                     for key, value in bands_requested.items():
                         all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=(1, stride_patch_size, stride_patch_size)))
                 aoi_dask_array = xr.concat(all_bands_requested, dim="band")
                 del all_bands_requested
+            
+            if self.no_data is None:
+                self.no_data = 0
+            self.valid_mask = (aoi_dask_array != self.no_data).all(dim="band")
 
             if bbox is not None:
                 if not isinstance(bbox, (List, ListConfig)):
@@ -370,6 +377,8 @@ class GeoInference:
                 # import rioxarray
                 logger.info("Inference is running:")
                 aoi_dask_array = xr.DataArray(aoi_dask_array[: self.original_shape[1], : self.original_shape[2]], dims=("y", "x"), attrs= self.json if self.json is not None else xarray_profile_info(self.raster_meta))
+                aoi_dask_array = aoi_dask_array.where(self.valid_mask, other=255)
+                aoi_dask_array.rio.write_nodata(255, inplace=True)
                 aoi_dask_array.rio.to_raster(mask_path, tiled=True, lock=threading.Lock())
                 
             total_time = time.time() - start_time
