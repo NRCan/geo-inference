@@ -1,0 +1,1 @@
+{"annotations": [{"id": 1, "image_id": 1, "category_id": 1, "segmentation": [[1.0, 0.0, 413.0, 0.0, 413.0, 426.0, 1.0, 426.0, 1.0, 0.0]], "area": 175512.0, "bbox": [1.0, 0.0, 412.0, 426.0], "iscrowd": 0}], "categories": [{"id": 1, "name": 4.0}], "images": [{"id": 1, "file_name": "SpaceNet_AOI_2_Las_Vegas.json_mask.tif", "width": 413, "height": 426}]}

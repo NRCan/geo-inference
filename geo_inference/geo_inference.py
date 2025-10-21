@@ -321,7 +321,7 @@ class GeoInference:
                 aoi_dask_array = aoi_dask_array[
                     :, row_off : row_off + height, col_off : col_off + width
                 ]
-                self.valid_mask = self.valid_mask[:, row_off : row_off + height, col_off : col_off + width]
+                self.valid_mask = self.valid_mask[row_off : row_off + height, col_off : col_off + width]
                 self.raster_meta.update({
                     'transform': self.bbox_transform,
                     'width': aoi_dask_array.shape[2],

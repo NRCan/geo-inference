@@ -1,5 +1,6 @@
 import os
 import pytest
+import math
 import torch
 import rasterio
 import numpy as np
@@ -75,10 +76,10 @@ class TestGeoInference:
 
         with rasterio.open(mask_path) as img:
             xmin, ymin, xmax, ymax = img.bounds
-            assert round(xmin) == round(bbox[0])
-            assert round(ymin) == round(bbox[1])
-            assert round(xmax) == round(bbox[2])
-            assert round(ymax) == round(bbox[3])
+            assert math.isclose(xmin, bbox[0], abs_tol=1)
+            assert math.isclose(ymin, bbox[1], abs_tol=1)
+            assert math.isclose(xmax, bbox[2], abs_tol=1)
+            assert math.isclose(ymax, bbox[3], abs_tol=1)
         polygons_path = geo_inference.work_dir / "0_polygons.geojson"
         assert polygons_path.exists()
         os.remove(polygons_path)
