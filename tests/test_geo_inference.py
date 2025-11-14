@@ -80,7 +80,10 @@ class TestGeoInference:
             assert math.isclose(ymin, bbox[1], abs_tol=1)
             assert math.isclose(xmax, bbox[2], abs_tol=1)
             assert math.isclose(ymax, bbox[3], abs_tol=1)
-        polygons_path = geo_inference.work_dir / "0_polygons.geojson"
+        u_id = mask_name.rsplit("_", 1)[-1]
+        u_id_no_ext = os.path.splitext(u_id)[0]
+        polygons_path = geo_inference.work_dir / f"0_polygons_{u_id_no_ext}.geojson"
+
         assert polygons_path.exists()
         os.remove(polygons_path)
         os.remove(mask_path)
