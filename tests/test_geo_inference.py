@@ -15,9 +15,9 @@ def test_data_dir():
 class TestGeoInference:
 
     @pytest.fixture
-    def geo_inference(self, test_data_dir):
+    def geo_inference(self, test_data_dir, tmp_path):
         model = str(test_data_dir / "inference" / "test_model" / "cpu_scripted.pt")
-        work_dir = str(test_data_dir / "inference")
+        work_dir = str(tmp_path / "inference")
         mask_to_vec = True
         mask_to_yolo = True
         mask_to_coco = True
@@ -44,9 +44,9 @@ class TestGeoInference:
             transformer_rotate=transform_rotate,
         )
 
-    def test_init(self, geo_inference, test_data_dir):
+    def test_init(self, geo_inference, tmp_path):
 
-        assert geo_inference.work_dir == test_data_dir / "inference"
+        assert geo_inference.work_dir == tmp_path / "inference"
         assert geo_inference.device == "cpu"
         assert geo_inference.mask_to_vec == True
         assert geo_inference.mask_to_yolo == True
@@ -77,7 +77,9 @@ class TestGeoInference:
             assert round(ymin) == round(bbox[1])
             assert round(xmax) == round(bbox[2])
             assert round(ymax) == round(bbox[3])
-        polygons_path = geo_inference.work_dir / "0_polygons.geojson"
+        u_id = mask_name.rsplit("_", 1)[-1]
+        u_id_no_ext = os.path.splitext(u_id)[0]
+        polygons_path = geo_inference.work_dir / f"0_polygons_{u_id_no_ext}.geojson"
         assert polygons_path.exists()
         os.remove(polygons_path)
         os.remove(mask_path)
@@ -91,21 +93,23 @@ class TestGeoInference:
             workers=workers,
             bbox=bbox,
         )
+        u_id = mask_name.rsplit("_", 1)[-1]
+        u_id_no_ext = os.path.splitext(u_id)[0]
         mask_path = geo_inference.work_dir / mask_name
         assert mask_path.exists()
-        polygons_path = geo_inference.work_dir / "0_polygons.geojson"
+        polygons_path = geo_inference.work_dir / f"0_polygons_{u_id_no_ext}.geojson"
         assert polygons_path.exists()
         os.remove(polygons_path)
         os.remove(mask_path)
     
     def test_call_stac(self, geo_inference: GeoInference, test_data_dir: Path):
-        tiff_image = r"./tests/data/stac/SpaceNet_AOI_2_Las_Vegas.json"
+        tiff_image = test_data_dir / "stac" / "SpaceNet_AOI_2_Las_Vegas.json"
         bbox = None
         patch_size = 512
         bands_requested = ["Red","Green","Blue"]
         workers = 10
         mask_name = geo_inference(
-            inference_input=str(tiff_image),
+            inference_input=str(tiff_image.resolve()),
             bands_requested=bands_requested,
             patch_size=patch_size,
             workers=workers,
