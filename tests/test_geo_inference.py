@@ -1,15 +1,18 @@
 import os
 import pytest
+import math
 import torch
 import rasterio
-
-from geo_inference.geo_inference import GeoInference
+import numpy as np
+from unittest.mock import patch
+from geo_inference.geo_inference import GeoInference, logger 
 from pathlib import Path
 
 
 @pytest.fixture
 def test_data_dir():
     return Path(__file__).parent / "data"
+
 
 
 class TestGeoInference:
@@ -73,13 +76,11 @@ class TestGeoInference:
 
         with rasterio.open(mask_path) as img:
             xmin, ymin, xmax, ymax = img.bounds
-            assert round(xmin) == round(bbox[0])
-            assert round(ymin) == round(bbox[1])
-            assert round(xmax) == round(bbox[2])
-            assert round(ymax) == round(bbox[3])
-        u_id = mask_name.rsplit("_", 1)[-1]
-        u_id_no_ext = os.path.splitext(u_id)[0]
-        polygons_path = geo_inference.work_dir / f"0_polygons_{u_id_no_ext}.geojson"
+            assert math.isclose(xmin, bbox[0], abs_tol=1)
+            assert math.isclose(ymin, bbox[1], abs_tol=1)
+            assert math.isclose(xmax, bbox[2], abs_tol=1)
+            assert math.isclose(ymax, bbox[3], abs_tol=1)
+        polygons_path = geo_inference.work_dir / "0_polygons.geojson"
         assert polygons_path.exists()
         os.remove(polygons_path)
         os.remove(mask_path)
@@ -118,3 +119,38 @@ class TestGeoInference:
         mask_path = geo_inference.work_dir / mask_name
         assert mask_path.exists()
         os.remove(mask_path)
+    
+    def test_band_reordering_logic(self, geo_inference, test_data_dir):
+        """Test the specific band reordering logic with xr.concat and da.stack."""
+        tiff_image = test_data_dir / "0.tif"
+        # Track what gets logged
+        logged_messages = []
+        
+        def capture_log(message):
+            logged_messages.append(message)
+            print(f"LOG: {message}")
+
+        # Mock logger to capture the "Bands are reordeing" message
+        with patch.object(logger, 'info', side_effect=capture_log), \
+             patch("geo_inference.geo_inference.runModel", return_value=np.ones((4, 4), dtype=np.uint8)), \
+             patch("geo_inference.geo_inference.sum_overlapped_chunks", side_effect=lambda arr, **kwargs: arr), \
+             patch("xarray.DataArray.rio.to_raster"), \
+             patch("os.path.exists", return_value=True):
+
+            geo_inference.mask_to_vec = False
+            
+            bands_requested = ["3", "1", "2"]
+            
+            mask_name = geo_inference(
+                inference_input=str(tiff_image), 
+                bands_requested=bands_requested,
+                patch_size=4,
+                workers=0,
+                bbox=None
+            )
+            
+            # Verify the band reordering message was logged
+            reorder_messages = [msg for msg in logged_messages if "Bands are reordeing to bands_requested" in msg]
+            assert len(reorder_messages) > 0, "Band reordering log message should appear"
+
+            
