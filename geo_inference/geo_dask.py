@@ -34,163 +34,171 @@ def runModel(
     """
     num_chunks = block_info[0]["num-chunks"]
     chunk_location = block_info[0]["chunk-location"]
-    if chunk_data.size > 0 and chunk_data is not None:
-        try:
-            # Defining the base window for window creation later
-            step = patch_size >> 1
-            window = w.hann(M=patch_size, sym=False)
-            window = window[:, np.newaxis] * window[np.newaxis, :]
-            final_window = np.empty((1, 1))
 
-            if chunk_location[2] >= num_chunks[2] - 2 and chunk_location[1] == 0:
-                window_u = np.vstack(
-                    [
-                        np.tile(window[step : step + 1, :], (step, 1)),
-                        window[step:, :],
-                    ]
-                )
-                window_r = np.hstack(
-                    [
-                        window[:, :step],
-                        np.tile(window[:, step : step + 1], (1, step)),
-                    ]
-                )
-                final_window = np.block(
-                    [
-                        [window_u[:step, :step], np.ones((step, step))],
-                        [window_r[step:, :step], window_r[step:, step:]],
-                    ]
-                )
-            elif chunk_location[2] >= num_chunks[2] - 2 and (
-                chunk_location[1] > 0 and chunk_location[1] < num_chunks[1] - 2
-            ):
-                # left egde window
-                final_window = np.hstack(
-                    [
-                        window[:, :step],
-                        np.tile(window[:, step : step + 1], (1, step)),
-                    ]
-                )
-            elif chunk_location[2] >= num_chunks[2] - 2 and (
-                chunk_location[1] >= num_chunks[1] - 2
-            ):
-                # bottom right window
-                window_r = np.hstack(
-                    [
-                        window[:, :step],
-                        np.tile(window[:, step : step + 1], (1, step)),
-                    ]
-                )
-                window_b = np.vstack(
-                    [
-                        window[:step, :],
-                        np.tile(window[step : step + 1, :], (step, 1)),
-                    ]
-                )
-                final_window = np.block(
-                    [
-                        [window_r[:step, :step], window_r[:step, step:]],
-                        [window_b[step:, :step], np.ones((step, step))],
-                    ]
-                )
-            elif chunk_location[1] >= num_chunks[1] - 2 and (
-                chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2
-            ):
-                # bottom egde window
-                final_window = np.vstack(
-                    [
-                        window[:step, :],
-                        np.tile(window[step : step + 1, :], (step, 1)),
-                    ]
-                )
-            elif chunk_location[1] >= num_chunks[1] - 2 and chunk_location[2] == 0:
-                # bottom left window
-                window_l = np.hstack(
-                    [
-                        np.tile(window[:, step : step + 1], (1, step)),
-                        window[:, step:],
-                    ]
-                )
-                window_b = np.vstack(
-                    [
-                        window[:step, :],
-                        np.tile(window[step : step + 1, :], (step, 1)),
-                    ]
-                )
-                final_window = np.block(
-                    [
-                        [window_l[:step, :step], window_l[:step, step:]],
-                        [np.ones((step, step)), window_b[step:, step:]],
-                    ]
-                )
-            elif chunk_location[1] == 0 and chunk_location[2] == 0:
-                # Top left window
-                window_u = np.vstack(
-                    [
-                        np.tile(window[step : step + 1, :], (step, 1)),
-                        window[step:, :],
-                    ]
-                )
-                window_l = np.hstack(
-                    [
-                        np.tile(window[:, step : step + 1], (1, step)),
-                        window[:, step:],
-                    ]
-                )
-                final_window = np.block(
-                    [
-                        [np.ones((step, step)), window_u[:step, step:]],
-                        [window_l[step:, :step], window_l[step:, step:]],
-                    ]
-                )
-            elif chunk_location[2] == 0 and (
-                chunk_location[1] > 0 and chunk_location[1] < num_chunks[1]
-            ):
-                # top edge window
-                final_window = np.hstack(
-                    [
-                        np.tile(window[:, step : step + 1], (1, step)),
-                        window[:, step:],
-                    ]
-                )
-            elif (chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2) and (
-                chunk_location[1] == 0
-            ):
-                # top edge window
-                final_window = np.vstack(
-                    [
-                        np.tile(window[step : step + 1, :], (step, 1)),
-                        window[step:, :],
-                    ]
-                )
-            elif (chunk_location[1] > 0 and chunk_location[1] < num_chunks[1] - 2) and (
-                chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2
-            ):
-                final_window = window
+    if chunk_data is None or chunk_data.size == 0:
+        return np.zeros((num_classes + 1, patch_size, patch_size))
 
-            tensor = torch.as_tensor(chunk_data[np.newaxis, ...]).to(
-                torch.device(device)
+    if np.all(chunk_data == 0):
+        return np.zeros((num_classes + 1, patch_size, patch_size))
+    
+    try:
+        
+        # Defining the base window for window creation later
+        step = patch_size >> 1
+        window = w.hann(M=patch_size, sym=False)
+        window = window[:, np.newaxis] * window[np.newaxis, :]
+        final_window = np.empty((1, 1))
+
+        if chunk_location[2] >= num_chunks[2] - 2 and chunk_location[1] == 0:
+            window_u = np.vstack(
+                [
+                    np.tile(window[step : step + 1, :], (step, 1)),
+                    window[step:, :],
+                ]
             )
-            out = np.empty(
-                shape=(num_classes, chunk_data.shape[1], chunk_data.shape[2])
-            )  # Create the output but empty
-            with torch.no_grad():
-                out = model(tensor).cpu().numpy()[0]
-            del tensor
-            if out.shape[1:] == final_window.shape and out.shape[1:] == (
-                patch_size,
-                patch_size,
-            ):
-                return np.concatenate(
-                    (out * final_window, final_window[np.newaxis, :, :]), axis=0
-                )
-            else:
-                return np.zeros((num_classes + 1, patch_size, patch_size))
-        except Exception as e:
-            logging.error(f"Error occured in RunModel: {e}")
-        finally:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()  # Release unused memory
+            window_r = np.hstack(
+                [
+                    window[:, :step],
+                    np.tile(window[:, step : step + 1], (1, step)),
+                ]
+            )
+            final_window = np.block(
+                [
+                    [window_u[:step, :step], np.ones((step, step))],
+                    [window_r[step:, :step], window_r[step:, step:]],
+                ]
+            )
+        elif chunk_location[2] >= num_chunks[2] - 2 and (
+            chunk_location[1] > 0 and chunk_location[1] < num_chunks[1] - 2
+        ):
+            # left egde window
+            final_window = np.hstack(
+                [
+                    window[:, :step],
+                    np.tile(window[:, step : step + 1], (1, step)),
+                ]
+            )
+        elif chunk_location[2] >= num_chunks[2] - 2 and (
+            chunk_location[1] >= num_chunks[1] - 2
+        ):
+            # bottom right window
+            window_r = np.hstack(
+                [
+                    window[:, :step],
+                    np.tile(window[:, step : step + 1], (1, step)),
+                ]
+            )
+            window_b = np.vstack(
+                [
+                    window[:step, :],
+                    np.tile(window[step : step + 1, :], (step, 1)),
+                ]
+            )
+            final_window = np.block(
+                [
+                    [window_r[:step, :step], window_r[:step, step:]],
+                    [window_b[step:, :step], np.ones((step, step))],
+                ]
+            )
+        elif chunk_location[1] >= num_chunks[1] - 2 and (
+            chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2
+        ):
+            # bottom egde window
+            final_window = np.vstack(
+                [
+                    window[:step, :],
+                    np.tile(window[step : step + 1, :], (step, 1)),
+                ]
+            )
+        elif chunk_location[1] >= num_chunks[1] - 2 and chunk_location[2] == 0:
+            # bottom left window
+            window_l = np.hstack(
+                [
+                    np.tile(window[:, step : step + 1], (1, step)),
+                    window[:, step:],
+                ]
+            )
+            window_b = np.vstack(
+                [
+                    window[:step, :],
+                    np.tile(window[step : step + 1, :], (step, 1)),
+                ]
+            )
+            final_window = np.block(
+                [
+                    [window_l[:step, :step], window_l[:step, step:]],
+                    [np.ones((step, step)), window_b[step:, step:]],
+                ]
+            )
+        elif chunk_location[1] == 0 and chunk_location[2] == 0:
+            # Top left window
+            window_u = np.vstack(
+                [
+                    np.tile(window[step : step + 1, :], (step, 1)),
+                    window[step:, :],
+                ]
+            )
+            window_l = np.hstack(
+                [
+                    np.tile(window[:, step : step + 1], (1, step)),
+                    window[:, step:],
+                ]
+            )
+            final_window = np.block(
+                [
+                    [np.ones((step, step)), window_u[:step, step:]],
+                    [window_l[step:, :step], window_l[step:, step:]],
+                ]
+            )
+        elif chunk_location[2] == 0 and (
+            chunk_location[1] > 0 and chunk_location[1] < num_chunks[1]
+        ):
+            # top edge window
+            final_window = np.hstack(
+                [
+                    np.tile(window[:, step : step + 1], (1, step)),
+                    window[:, step:],
+                ]
+            )
+        elif (chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2) and (
+            chunk_location[1] == 0
+        ):
+            # top edge window
+            final_window = np.vstack(
+                [
+                    np.tile(window[step : step + 1, :], (step, 1)),
+                    window[step:, :],
+                ]
+            )
+        elif (chunk_location[1] > 0 and chunk_location[1] < num_chunks[1] - 2) and (
+            chunk_location[2] > 0 and chunk_location[2] < num_chunks[2] - 2
+        ):
+            final_window = window
+
+        tensor = torch.as_tensor(chunk_data[np.newaxis, ...]).to(
+            torch.device(device)
+        )
+        out = np.empty(
+            shape=(num_classes, chunk_data.shape[1], chunk_data.shape[2])
+        )  # Create the output but empty
+        with torch.no_grad():
+            out = model(tensor).cpu().numpy()[0]
+        del tensor
+        if out.shape[1:] == final_window.shape and out.shape[1:] == (
+            patch_size,
+            patch_size,
+        ):
+            return np.concatenate(
+                (out * final_window, final_window[np.newaxis, :, :]), axis=0
+            )
+        else:
+            return np.zeros((num_classes + 1, patch_size, patch_size))
+
+    except Exception as e:
+        logging.error(f"Error occured in RunModel: {e}")
+    finally:
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()  # Release unused memory
 
 
 def sum_overlapped_chunks(

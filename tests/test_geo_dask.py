@@ -311,7 +311,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -341,7 +341,45 @@ class TestModelInference:
         )
         assert output.shape[0] == mock_num_classes + 1
         assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
+    
+    @patch("torch.jit.load")
+    def test_run_model_inference_left_edge_nodata(self, mock_load, mock_block_info_left_edge, generate_corner_windows):
+        from unittest.mock import MagicMock
+        from geo_inference import geo_dask as code
 
+        # Mocking parameters
+        chunk_data = np.zeros((3, 12, 12))
+        mock_call_result = MagicMock()
+        mock_cpu_result = MagicMock()
+        mock_chunk_size = 4
+        mock_num_classes = 3
+        mock_numpy_result = np.full((1, 3, 4, 4), fill_value=1)  # Example NumPy array
+
+        mock_cpu_result.numpy.return_value = mock_numpy_result
+        mock_cpu_result.shape = mock_numpy_result.shape
+        mock_call_result.cpu.return_value = mock_cpu_result
+
+        # Mock TorchScript model and its methods
+        mock_model = MagicMock(
+            spec=torch.jit.ScriptModule, return_value=mock_call_result
+        )
+        mock_model.to.return_value = mock_model
+        # Call the function under test
+        output = code.runModel(
+            chunk_data,
+            mock_model,
+            mock_chunk_size,
+            "cpu",
+            mock_num_classes,
+            mock_block_info_left_edge,
+        )
+
+        assert np.array_equal(
+            output[0, :, :], np.zeros((4,4))
+        )
+        assert output.shape[0] == mock_num_classes + 1
+        assert output.shape[1:] == (mock_chunk_size, mock_chunk_size)
+    
     @patch("torch.jit.load")
     def test_run_model_inference_right_edge(
         self, mock_load, mock_block_info_right_edge, generate_corner_windows
@@ -350,7 +388,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -389,7 +427,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -428,7 +466,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -470,7 +508,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -512,7 +550,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -554,7 +592,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4
@@ -596,7 +634,7 @@ class TestModelInference:
         from geo_inference import geo_dask as code
 
         # Mocking parameters
-        chunk_data = np.zeros((3, 12, 12))
+        chunk_data = np.ones((3, 12, 12))
         mock_call_result = MagicMock()
         mock_cpu_result = MagicMock()
         mock_chunk_size = 4

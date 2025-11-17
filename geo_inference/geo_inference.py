@@ -2,6 +2,7 @@ import os
 import gc
 import re
 import sys
+import uuid
 import platform
 import time
 import torch
@@ -221,10 +222,11 @@ class GeoInference:
         prefix_base_name = (
             prefix_base_name if not prefix_base_name.endswith(".zarr") else base_name[:-5]
         )
-        mask_path = self.work_dir.joinpath(prefix_base_name + "_mask.tif")
-        polygons_path = self.work_dir.joinpath(prefix_base_name + "_polygons.geojson")
-        yolo_csv_path = self.work_dir.joinpath(prefix_base_name + "_yolo.csv")
-        coco_json_path = self.work_dir.joinpath(prefix_base_name + "_coco.json")
+        u_id = uuid.uuid4().hex[:6] 
+        mask_path = self.work_dir.joinpath(prefix_base_name + f"_mask_{u_id}.tif")
+        polygons_path = self.work_dir.joinpath(prefix_base_name + f"_polygons_{u_id}.geojson")
+        yolo_csv_path = self.work_dir.joinpath(prefix_base_name + f"_yolo_{u_id}.csv")
+        coco_json_path = self.work_dir.joinpath(prefix_base_name + f"_coco_{u_id}.json")
         stride_patch_size = int(patch_size / 2)
         self.no_data = None
         
