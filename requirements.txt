@@ -12,3 +12,4 @@ xarray>=2024.6.0
 pystac>=1.10.1
 rioxarray>=0.15.6
 ttach>=0.0.3
+rtree>=1.0
