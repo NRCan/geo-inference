@@ -229,7 +229,7 @@ class GeoInference:
         coco_json_path = self.work_dir.joinpath(prefix_base_name + f"_coco_{u_id}.json")
         stride_patch_size = int(patch_size / 2)
         self.no_data = None
-        
+        self.input_dtype = None
 
         """ Processing starts"""
         start_time = time.time()
@@ -254,9 +254,11 @@ class GeoInference:
                     with rasterio.open(inference_input, "r") as src:
                         self.raster_meta = src.meta
                         self.raster = src
+                        self.no_data = src.nodata
+                        self.input_dtype = src.dtypes[0]
                     
                     aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
-                    self.no_data = aoi_dask_array.rio.nodata
+
                 try:
                     if bands_requested:
                         if (
@@ -292,15 +294,24 @@ class GeoInference:
                     with rasterio.open(bands_requested[next(iter(bands_requested))]["meta"].href, "r") as src:
                         self.raster_meta = src.meta
                         self.raster = src
-                        self.no_data = src.nodata 
+                        self.no_data = src.nodata
+                        self.input_dtype = src.dtypes[0]
                     for key, value in bands_requested.items():
                         all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=(1, stride_patch_size, stride_patch_size)))
                 aoi_dask_array = xr.concat(all_bands_requested, dim="band")
                 del all_bands_requested
             
+            is_float = False
             if self.no_data is None:
-                self.no_data = 0
-            self.valid_mask = (aoi_dask_array != self.no_data).all(dim="band")
+                if np.issubdtype(np.dtype(self.input_dtype), np.floating):
+                    self.no_data = np.nan
+                    is_float = True
+                else:
+                    self.no_data = 0
+            if is_float:
+                self.valid_mask = np.isfinite(aoi_dask_array).all(dim="band")
+            else:
+                self.valid_mask = (aoi_dask_array != self.no_data).all(dim="band")
 
             if bbox is not None:
                 if not isinstance(bbox, (List, ListConfig)):
@@ -350,6 +361,7 @@ class GeoInference:
                 patch_size=patch_size,
                 device=self.device,
                 num_classes=self.classes,
+                no_data = self.no_data,
                 chunks=(
                     self.classes + 1,
                     patch_size,

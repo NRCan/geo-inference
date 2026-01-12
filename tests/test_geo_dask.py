@@ -333,6 +333,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_left_edge,
         )
@@ -370,6 +371,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_left_edge,
         )
@@ -410,6 +412,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_right_edge,
         )
@@ -449,6 +452,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_bottom_edge,
         )
@@ -488,6 +492,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_bottom_left_corner,
         )
@@ -530,6 +535,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_bottom_right_corner,
         )
@@ -572,6 +578,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_top_left_corner,
         )
@@ -614,6 +621,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            np.nan,
             mock_num_classes,
             mock_block_info_top_right_corner,
         )
@@ -656,6 +664,7 @@ class TestModelInference:
             mock_model,
             mock_chunk_size,
             "cpu",
+            0,
             mock_num_classes,
             mock_block_info_top_edge,
         )
