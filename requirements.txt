@@ -3,7 +3,7 @@ affine>=2.4.0
 colorlog==6.7.0
 scipy>=1.13.1
 pyyaml>=5.2
-pynvml>=11.0
+nvidia-ml-py>=11.4
 geopandas>=0.14.4
 dask-image>=2024.5.3
 dask[distributed]>=2024.6.2
@@ -12,3 +12,4 @@ xarray>=2024.6.0
 pystac>=1.10.1
 rioxarray>=0.15.6
 ttach>=0.0.3
+rtree>=1.0

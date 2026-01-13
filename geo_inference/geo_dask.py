@@ -2,7 +2,7 @@
 
 import torch
 import logging
-from typing import Union
+from typing import Union, Optional
 import json
 from pathlib import Path
 import numpy as np
@@ -16,6 +16,7 @@ def runModel(
     model,
     patch_size: int,
     device: str,
+    no_data: Optional[float],
     num_classes: int = 5,
     block_info=None,
 ):
@@ -28,6 +29,7 @@ def runModel(
             model: ScrptedModel, the scripted model.
             patch_size: int , the size of each patch on which the model should be run.
             device : str, the torch device; either cpu or gpu.
+            no_data: Optional[float], the no data value.
             num_classes: int, the number of classes that model work with.
             block_info: none, this is having all the info about the chunk relative to the whole data (dask array)
     @return: predited chunks
@@ -38,7 +40,11 @@ def runModel(
     if chunk_data is None or chunk_data.size == 0:
         return np.zeros((num_classes + 1, patch_size, patch_size))
 
-    if np.all(chunk_data == 0):
+    if (
+        (no_data is None and not np.isfinite(chunk_data).any())
+        or (no_data is not None and np.isnan(no_data) and not np.isfinite(chunk_data).any())
+        or (no_data is not None and not np.isnan(no_data) and np.all(chunk_data == no_data))
+    ):
         return np.zeros((num_classes + 1, patch_size, patch_size))
     
     try:

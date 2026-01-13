@@ -57,7 +57,6 @@ Alternatively, you can build the [Dockerfile](./Dockerfile) to use Geo-Inference
 **Input:** GeoTiffs with compatible TorchScript model. For example: A pytorch model trained on high resolution geospatial imagery with the following features:
 
 - pixel size (0.1m to 3m)
-- data type (uint8)
 
 expects an input image with the same features. An example notebook for how the package is used is provided in this repo. 
 
