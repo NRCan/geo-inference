@@ -346,6 +346,7 @@ def normalize_with_mask(
 
     return _normalize_single_band(da, nodata_value, target_dtype)
 
+
 def _normalize_single_band(
     da: xr.DataArray,
     nodata_value: int | float,
@@ -371,6 +372,7 @@ def _normalize_single_band(
     da = da.rio.write_nodata(nodata_value, inplace=False)
 
     return da
+
 
 def has_internal_mask(raster: str) -> bool:
     """
@@ -399,6 +401,7 @@ def has_internal_mask(raster: str) -> bool:
     has_mask = "Mask Flags: PER_DATASET" in output
 
     return has_mask
+
 
 def xarray_profile_info(
     raster_meta

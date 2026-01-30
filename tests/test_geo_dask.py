@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 import scipy.signal.windows as w
 import torch
-
+import subprocess
 
 
 @pytest.fixture
@@ -120,6 +120,15 @@ def generate_corner_windows() -> np.ndarray:
         ]
     )
 
+
+@pytest.fixture(autouse=True)
+def mock_gdalinfo(monkeypatch):
+    def fake_run(cmd, *args, **kwargs):
+        if cmd[0] == "gdalinfo":
+            return subprocess.CompletedProcess(cmd, 0, stdout=b"Fake GDAL info", stderr=b"")
+        # call the real subprocess.run for all other commands
+        return subprocess.run(cmd, *args, **kwargs)
+    monkeypatch.setattr(subprocess, "run", fake_run)
 
 class TestSumOverlappedChunks:
     
