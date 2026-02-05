@@ -5,11 +5,10 @@ import rasterio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
-import subprocess
 import numpy as np
 import xarray as xr
-import pytest
 import rioxarray  # noqa: F401 (needed for .rio accessor)
+from rasterio.transform import from_origin
 from geo_inference.utils.helpers import (calculate_gpu_stats,
                                          extract_tar_gz,
                                          get_directory, get_model,
@@ -293,26 +292,46 @@ def test_normalize_with_mask_requires_target_dtype():
     with pytest.raises(ValueError, match="target_dtype must be provided"):
         normalize_with_mask(da)
 
-def test_has_internal_mask_true(monkeypatch):
-    def fake_check_output(cmd):
-        return b"""
-        Driver: GTiff/GeoTIFF
-        Size is 100, 100
-        Mask Flags: PER_DATASET
-        """
 
-    monkeypatch.setattr(subprocess, "check_output", fake_check_output)
+def test_has_internal_mask_true(tmp_path):
+    tif = tmp_path / "with_dataset_mask.tif"
 
-    assert has_internal_mask("dummy.tif") is True
+    data = np.ones((10, 10), dtype=np.uint8)
 
-def test_has_internal_mask_false(monkeypatch):
-    def fake_check_output(cmd):
-        return b"""
-        Driver: GTiff/GeoTIFF
-        Size is 100, 100
-        Mask Flags: ALPHA
-        """
+    with rasterio.open(
+        tif,
+        "w",
+        driver="GTiff",
+        height=10,
+        width=10,
+        count=1,
+        dtype=data.dtype,
+        transform=from_origin(0, 0, 1, 1),
+    ) as ds:
+        ds.write(data, 1)
 
-    monkeypatch.setattr(subprocess, "check_output", fake_check_output)
+        # Create a dataset-wide internal mask
+        mask = np.ones((10, 10), dtype=np.uint8) * 255
+        ds.write_mask(mask)
 
-    assert has_internal_mask("dummy.tif") is False
+    assert has_internal_mask(str(tif)) is True
+
+
+def test_has_internal_mask_false(tmp_path):
+    tif = tmp_path / "without_mask.tif"
+
+    data = np.ones((10, 10), dtype=np.uint8)
+
+    with rasterio.open(
+        tif,
+        "w",
+        driver="GTiff",
+        height=10,
+        width=10,
+        count=1,
+        dtype=data.dtype,
+        transform=from_origin(0, 0, 1, 1),
+    ) as ds:
+        ds.write(data, 1)
+
+    assert has_internal_mask(str(tif)) is False

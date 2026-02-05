@@ -255,16 +255,7 @@ class GeoInference:
                     meta_data_json = re.sub(r'\.zarr$', '', inference_input)
                     self.json = read_zarr_metadata(f"{meta_data_json}.json")
                 else:
-                    if shutil.which("gdalinfo") is None:
-                        warnings.warn(
-                            "gdalinfo not found. Checking the internal mask feature will be disabled. "
-                            "Install GDAL to enable full functionality.",
-                            category=RuntimeWarning,
-                            stacklevel=2,
-                        )
-                        has_mask = False
-                    else:
-                        has_mask = has_internal_mask(inference_input)
+                    has_mask = has_internal_mask(inference_input)
                     with rasterio.open(inference_input, "r") as src:
                         self.raster_meta = src.meta
                         self.raster = src
@@ -319,19 +310,8 @@ class GeoInference:
                         self.raster = src
                         self.no_data = src.nodata
                         self.input_dtype = src.dtypes[0]
-                    check_mask = True
-                    if shutil.which("gdalinfo") is None:
-                        warnings.warn(
-                            "gdalinfo not found. Checking the internal mask feature will be disabled. "
-                            "Install GDAL to enable full functionality.",
-                            category=RuntimeWarning,
-                            stacklevel=2,
-                        )
-                        has_mask = False
-                        check_mask = False
                     for key, value in bands_requested.items():
-                        if check_mask:
-                            has_mask = has_internal_mask(value["meta"].href)
+                        has_mask = has_internal_mask(value["meta"].href)
                         if has_mask: 
                             self.no_data = 0
                             aoi_dask_array_tmp = rioxarray.open_rasterio(value["meta"].href, masked=True,  chunks=(1, stride_patch_size, stride_patch_size))

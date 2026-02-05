@@ -11,8 +11,8 @@ import torch
 import yaml
 import numpy as np
 import xarray as xr
-import subprocess
 import csv
+from rasterio.enums import MaskFlags
 from tqdm import tqdm
 from typing import Dict, Union
 from hydra.utils import to_absolute_path
@@ -378,9 +378,9 @@ def has_internal_mask(raster: str) -> bool:
     """
     Check if a raster file has an internal GDAL dataset mask.
 
-    This method uses `gdalinfo` to inspect the raster's mask flags.
+    This method uses Rasterio to inspect the raster's mask flags.
     It returns True only if the raster contains a PER_DATASET internal mask,
-    which is a true GDAL internal mask applied to the entire dataset.
+    which corresponds to a GDAL dataset-wide internal mask.
 
     Parameters
     ----------
@@ -394,12 +394,15 @@ def has_internal_mask(raster: str) -> bool:
 
     Notes
     -----
-    - This does not detect alpha bands (Mask Flags: ALPHA).
-    - Uses the `gdalinfo` command-line utility, so GDAL must be installed.
+    - This does not detect alpha bands (MaskFlags.alpha).
+    - This does not detect per-band masks (MaskFlags.per_band).
+    - Requires Rasterio (GDAL-backed).
     """
-    output = subprocess.check_output(["gdalinfo", f"{raster}"]).decode()
-    has_mask = "Mask Flags: PER_DATASET" in output
-
+    has_mask = False
+    with rasterio.open(raster) as ds:
+        for flags in ds.mask_flag_enums:
+            if MaskFlags.per_dataset in flags:
+                has_mask = True
     return has_mask
 
 

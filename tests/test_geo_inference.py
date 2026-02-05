@@ -7,20 +7,10 @@ import numpy as np
 from unittest.mock import patch
 from geo_inference.geo_inference import GeoInference, logger 
 from pathlib import Path
-import subprocess
 
 @pytest.fixture
 def test_data_dir():
     return Path(__file__).parent / "data"
-
-@pytest.fixture(autouse=True)
-def mock_gdalinfo(monkeypatch):
-    def fake_run(cmd, *args, **kwargs):
-        if cmd[0] == "gdalinfo":
-            return subprocess.CompletedProcess(cmd, 0, stdout=b"Fake GDAL info", stderr=b"")
-        # call the real subprocess.run for all other commands
-        return subprocess.run(cmd, *args, **kwargs)
-    monkeypatch.setattr(subprocess, "run", fake_run)
 
 class TestGeoInference:
 
