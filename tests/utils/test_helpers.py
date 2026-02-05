@@ -5,6 +5,10 @@ import rasterio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
+import numpy as np
+import xarray as xr
+import rioxarray  # noqa: F401 (needed for .rio accessor)
+from rasterio.transform import from_origin
 from geo_inference.utils.helpers import (calculate_gpu_stats,
                                          extract_tar_gz,
                                          get_directory, get_model,
@@ -12,7 +16,7 @@ from geo_inference.utils.helpers import (calculate_gpu_stats,
                                          select_model_device,
                                          is_tiff_path, is_tiff_url, read_yaml,
                                          validate_asset_type,
-                                         cmd_interface)
+                                         cmd_interface, normalize_with_mask, has_internal_mask)
 
 @pytest.fixture
 def test_data_dir():
@@ -186,3 +190,148 @@ def test_cmd_interface_no_args(monkeypatch):
     # Call the function and assert that it raises SystemExit
     with pytest.raises(SystemExit):
         cmd_interface()
+
+def test_normalize_with_mask_integer_single_band():
+    data = np.array([[np.nan, 5], [10, np.nan]], dtype=float)
+
+    da = xr.DataArray(
+        data,
+        dims=("y", "x"),
+    )
+
+    out = normalize_with_mask(
+        da,
+        nodata_value=0,
+        target_dtype=np.uint16,
+    )
+
+    out_vals = out.values
+
+    # nodata replaced with 0
+    assert out_vals[0, 0] == 0
+    assert out_vals[1, 1] == 0
+
+    # valid values shifted so min becomes 1
+    assert out_vals[0, 1] == 1
+    assert out_vals[1, 0] == 6
+
+    # dtype preserved
+    assert out.dtype == np.uint16
+
+    # nodata metadata written
+    assert out.rio.nodata == 0
+
+def test_normalize_with_mask_float_single_band():
+    data = np.array([[np.nan, 2.0], [4.0, np.nan]], dtype=float)
+
+    da = xr.DataArray(
+        data,
+        dims=("y", "x"),
+    )
+
+    out = normalize_with_mask(
+        da,
+        nodata_value=0.0,
+        target_dtype=np.float32,
+    )
+
+    out_vals = out.values
+    eps = np.finfo(np.float32).eps
+
+    # nodata replaced
+    assert out_vals[0, 0] == 0.0
+    assert out_vals[1, 1] == 0.0
+
+    # valid values > 0 (shifted by min + eps)
+    assert out_vals[0, 1] == pytest.approx(eps)
+    assert out_vals[1, 0] == pytest.approx(2.0 + eps)
+
+    assert out.dtype == np.float32
+    assert out.rio.nodata == 0.0
+
+def test_normalize_with_mask_multi_band():
+    data = np.array(
+        [
+            [[np.nan, 1], [2, np.nan]],   # band 1
+            [[np.nan, 10], [20, np.nan]], # band 2
+        ],
+        dtype=float,
+    )
+
+    da = xr.DataArray(
+        data,
+        dims=("band", "y", "x"),
+        coords={"band": [1, 2]},
+    )
+
+    out = normalize_with_mask(
+        da,
+        nodata_value=0,
+        target_dtype=np.uint16,
+    )
+
+    assert "band" in out.dims
+    assert out.shape == da.shape
+
+    # per-band normalization
+    band1 = out.sel(band=1).values
+    band2 = out.sel(band=2).values
+
+    assert band1[0, 1] == 1
+    assert band1[1, 0] == 2
+
+    assert band2[0, 1] == 1
+    assert band2[1, 0] == 11
+
+def test_normalize_with_mask_requires_target_dtype():
+    da = xr.DataArray(
+        np.array([[1, 2], [3, 4]], dtype=float),
+        dims=("y", "x"),
+    )
+
+    with pytest.raises(ValueError, match="target_dtype must be provided"):
+        normalize_with_mask(da)
+
+
+def test_has_internal_mask_true(tmp_path):
+    tif = tmp_path / "with_dataset_mask.tif"
+
+    data = np.ones((10, 10), dtype=np.uint8)
+
+    with rasterio.open(
+        tif,
+        "w",
+        driver="GTiff",
+        height=10,
+        width=10,
+        count=1,
+        dtype=data.dtype,
+        transform=from_origin(0, 0, 1, 1),
+    ) as ds:
+        ds.write(data, 1)
+
+        # Create a dataset-wide internal mask
+        mask = np.ones((10, 10), dtype=np.uint8) * 255
+        ds.write_mask(mask)
+
+    assert has_internal_mask(str(tif)) is True
+
+
+def test_has_internal_mask_false(tmp_path):
+    tif = tmp_path / "without_mask.tif"
+
+    data = np.ones((10, 10), dtype=np.uint8)
+
+    with rasterio.open(
+        tif,
+        "w",
+        driver="GTiff",
+        height=10,
+        width=10,
+        count=1,
+        dtype=data.dtype,
+        transform=from_origin(0, 0, 1, 1),
+    ) as ds:
+        ds.write(data, 1)
+
+    assert has_internal_mask(str(tif)) is False

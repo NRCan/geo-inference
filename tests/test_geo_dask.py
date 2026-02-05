@@ -6,7 +6,6 @@ import scipy.signal.windows as w
 import torch
 
 
-
 @pytest.fixture
 def mock_block_info_top_right_corner():
     # Mocking block_info with predefined values
@@ -119,6 +118,7 @@ def generate_corner_windows() -> np.ndarray:
             [window_bl, window_b, window_br],
         ]
     )
+
 
 
 class TestSumOverlappedChunks:

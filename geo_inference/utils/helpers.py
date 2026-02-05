@@ -9,8 +9,10 @@ from urllib.parse import urlparse
 import requests
 import torch
 import yaml
-
+import numpy as np
+import xarray as xr
 import csv
+from rasterio.enums import MaskFlags
 from tqdm import tqdm
 from typing import Dict, Union
 from hydra.utils import to_absolute_path
@@ -274,6 +276,134 @@ def select_model_device(gpu_id: int, multi_gpu: bool, device: str="cpu"):
                     device = f"cuda:{i}"
                     break
     return device
+
+
+def normalize_with_mask(
+    da: xr.DataArray,
+    nodata_value: int | float = 0,
+    target_dtype: np.dtype | str | None = None,
+):
+    """
+    Normalize a raster DataArray with an internal mask so that nodata is
+    explicitly encoded as a numeric value that does not overlap with valid data.
+
+    This function assumes the input raster was opened with
+    ``rioxarray.open_rasterio(..., masked=True)``, meaning invalid pixels
+    (from an internal mask or alpha band) are represented as NaN values.
+
+    The normalization guarantees:
+    - All invalid pixels are set to ``nodata_value`` (default: 0)
+    - All valid pixels are strictly non-zero
+    - The original data type is preserved
+
+    The operation is performed lazily and is compatible with Dask-backed
+    DataArrays.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        Input raster opened with ``masked=True``. Masked pixels must be NaN.
+        The DataArray may be single-band or multi-band (``band`` dimension).
+    nodata_value : int or float, optional
+        Value to assign to invalid pixels. Defaults to 0.
+        Must not overlap with valid data after normalization.
+    target_dtype : numpy.dtype or str, optional
+        Target dtype of the output raster (e.g. ``np.uint16``, ``np.float32``).
+        Required to correctly determine integer vs floating-point behavior.
+
+    Returns
+    -------
+    xr.DataArray
+        Normalized raster with:
+        - nodata explicitly set to ``nodata_value``
+        - valid data shifted so that ``nodata_value`` is not a valid value
+        - dtype preserved
+        - ``rio.nodata`` metadata written
+
+    Notes
+    -----
+    - Integer rasters are shifted so the minimum valid value becomes ``1``.
+    - Floating-point rasters are shifted by ``min(valid) + eps`` to avoid zeros.
+    - This function does *not* rescale value ranges; it only shifts them.
+    - Per-band normalization is applied for multi-band rasters.
+
+    Raises
+    ------
+    ValueError
+        If ``target_dtype`` is not provided.
+    """
+    if target_dtype is None:
+        raise ValueError("target_dtype must be provided to normalize_with_mask")
+
+    if "band" in da.dims:
+        return xr.concat(
+            [
+                _normalize_single_band(da.sel(band=b), nodata_value, target_dtype)
+                for b in da.band.values
+            ],
+            dim="band",
+        )
+
+    return _normalize_single_band(da, nodata_value, target_dtype)
+
+
+def _normalize_single_band(
+    da: xr.DataArray,
+    nodata_value: int | float,
+    target_dtype: np.dtype | str,
+):
+    """
+    Normalize a single-band DataArray so that nodata is encoded explicitly and
+    does not overlap with valid values.
+
+    Assumes invalid pixels are represented as NaN.
+    """
+
+
+    valid_min = da.where(~np.isnan(da)).min().compute()
+    if np.issubdtype(target_dtype, np.integer):
+        da = da - valid_min + 1
+    else:
+        eps = np.finfo(target_dtype).eps
+        da = da - valid_min + eps
+        
+    da = da.fillna(nodata_value)
+    da = da.astype(target_dtype)
+    da = da.rio.write_nodata(nodata_value, inplace=False)
+
+    return da
+
+
+def has_internal_mask(raster: str) -> bool:
+    """
+    Check if a raster file has an internal GDAL dataset mask.
+
+    This method uses Rasterio to inspect the raster's mask flags.
+    It returns True only if the raster contains a PER_DATASET internal mask,
+    which corresponds to a GDAL dataset-wide internal mask.
+
+    Parameters
+    ----------
+    raster : str
+        Path to the raster file to check.
+
+    Returns
+    -------
+    bool
+        True if the raster has a PER_DATASET internal mask, False otherwise.
+
+    Notes
+    -----
+    - This does not detect alpha bands (MaskFlags.alpha).
+    - This does not detect per-band masks (MaskFlags.per_band).
+    - Requires Rasterio (GDAL-backed).
+    """
+    has_mask = False
+    with rasterio.open(raster) as ds:
+        for flags in ds.mask_flag_enums:
+            if MaskFlags.per_dataset in flags:
+                has_mask = True
+    return has_mask
 
 
 def xarray_profile_info(

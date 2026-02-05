@@ -8,6 +8,7 @@ import time
 import torch
 import pystac
 import logging
+import shutil
 import asyncio
 import rasterio
 import threading
@@ -15,6 +16,7 @@ import numpy as np
 import xarray as xr
 import rioxarray
 import ttach as tta
+import warnings
 from typing import Dict
 from dask import config
 import dask.array as da
@@ -32,6 +34,8 @@ from .utils.helpers import (
     get_directory,
     get_model,
     xarray_profile_info,
+    normalize_with_mask,
+    has_internal_mask,
     select_model_device,
     asset_by_common_name,
 )
@@ -251,13 +255,23 @@ class GeoInference:
                     meta_data_json = re.sub(r'\.zarr$', '', inference_input)
                     self.json = read_zarr_metadata(f"{meta_data_json}.json")
                 else:
+                    has_mask = has_internal_mask(inference_input)
                     with rasterio.open(inference_input, "r") as src:
                         self.raster_meta = src.meta
                         self.raster = src
                         self.no_data = src.nodata
                         self.input_dtype = src.dtypes[0]
-                    
-                    aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
+
+                    if has_mask: 
+                        self.no_data = 0
+                        aoi_dask_array = rioxarray.open_rasterio(inference_input, masked=True, chunks=(1, stride_patch_size, stride_patch_size))
+                        aoi_dask_array = normalize_with_mask(
+                            aoi_dask_array,
+                            nodata_value=self.no_data,
+                            target_dtype=self.input_dtype
+                        )
+                    else:
+                        aoi_dask_array = rioxarray.open_rasterio(inference_input, chunks=(1, stride_patch_size, stride_patch_size))
 
                 try:
                     if bands_requested:
@@ -297,7 +311,19 @@ class GeoInference:
                         self.no_data = src.nodata
                         self.input_dtype = src.dtypes[0]
                     for key, value in bands_requested.items():
-                        all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=(1, stride_patch_size, stride_patch_size)))
+                        has_mask = has_internal_mask(value["meta"].href)
+                        if has_mask: 
+                            self.no_data = 0
+                            aoi_dask_array_tmp = rioxarray.open_rasterio(value["meta"].href, masked=True,  chunks=(1, stride_patch_size, stride_patch_size))
+                            aoi_dask_array_tmp = normalize_with_mask(
+                                aoi_dask_array_tmp,
+                                nodata_value=self.no_data,
+                                target_dtype=self.input_dtype
+                            )
+                            all_bands_requested.append(aoi_dask_array_tmp)
+                            del aoi_dask_array_tmp
+                        else:
+                            all_bands_requested.append(rioxarray.open_rasterio(value["meta"].href, chunks=(1, stride_patch_size, stride_patch_size)))
                 aoi_dask_array = xr.concat(all_bands_requested, dim="band")
                 del all_bands_requested
             
