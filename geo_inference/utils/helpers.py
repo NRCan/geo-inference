@@ -1,33 +1,42 @@
 import argparse
+import csv
 import logging
 import os
 import re
 import tarfile
-import rasterio
+from collections import OrderedDict
 from pathlib import Path
 from urllib.parse import urlparse
+
+import dask.array as da
+import pystac
+import rasterio
 import requests
 import torch
 import yaml
-
-import csv
-from tqdm import tqdm
-from typing import Dict, Union
-from hydra.utils import to_absolute_path
 from pandas.io.common import is_url
-from collections import OrderedDict
-import pystac
 from pystac.extensions.eo import Band
-from pathlib import Path
-
-
-from ..config.logging_config import logger
+from rasterio.enums import MaskFlags
+from rasterio.windows import Window
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
 USER_CACHE = Path.home().joinpath(".cache")
 script_dir = Path(__file__).resolve().parent.parent
 MODEL_CONFIG = script_dir / "config" / "models.yaml"
+
+
+def to_absolute_path(path: str | Path) -> Path:
+    """Return an absolute path without relying on Hydra.
+
+    If ``path`` is already absolute, it is returned as-is. Otherwise, it is
+    interpreted as relative to the current working directory.
+    """
+    p = Path(path)
+    if p.is_absolute():
+        return p
+    return (Path.cwd() / p).resolve()
 
 
 def is_tiff_path(path: str):
@@ -147,7 +156,7 @@ def get_directory(work_directory: str) -> Path:
 
 def download_file_from_url(url, save_path, access_token=None):
     """Download a file from a URL
-    
+
     Args:
         url (str): URL to the file.
         save_path (str or Path): Path to save the file.
@@ -158,12 +167,14 @@ def download_file_from_url(url, save_path, access_token=None):
         headers["Authorization"] = f"Bearer {access_token}"
         response = requests.get(url, headers=headers, stream=True)
         if response.status_code == 200:
-            with open(save_path, 'wb') as file:
+            with open(save_path, "wb") as file:
                 for chunk in response.iter_content(chunk_size=128):
                     file.write(chunk)
             logger.info(f"Downloaded {save_path}")
         else:
-            logger.error(f"Failed to download the file from {url}. Status code: {response.status_code}")
+            logger.error(
+                f"Failed to download the file from {url}. Status code: {response.status_code}"
+            )
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         raise
@@ -196,13 +207,13 @@ def get_model(model_path_or_url: str, work_dir: Path) -> Path:
             raise ValueError("Invalid model path")
 
 
-def select_model_device(gpu_id: int, multi_gpu: bool, device: str="cpu"):
+def select_model_device(gpu_id: int, multi_gpu: bool, device: str = "cpu"):
     """
     Selects an appropriate GPU device based on memory usage and GPU utilization.
 
-    The function checks if a GPU is available using `torch.cuda.is_available()` 
-    and then evaluates either a single GPU or multiple GPUs based on the provided `multi_gpu` flag. 
-    It analyzes memory and utilization for each available GPU, and selects a device that has memory 
+    The function checks if a GPU is available using `torch.cuda.is_available()`
+    and then evaluates either a single GPU or multiple GPUs based on the provided `multi_gpu` flag.
+    It analyzes memory and utilization for each available GPU, and selects a device that has memory
     and utilization usage below a specific threshold.
 
     Parameters:
@@ -210,20 +221,20 @@ def select_model_device(gpu_id: int, multi_gpu: bool, device: str="cpu"):
     multi_gpu : bool
         If True, checks multiple GPUs and selects one with suitable memory and utilization stats.
     gpu_id : int
-        The index of the GPU to evaluate when not in multi-GPU mode.    
+        The index of the GPU to evaluate when not in multi-GPU mode.
     device : str
         The device string representing the current device (e.g., "cpu" or "cuda:X").
 
     Returns:
     --------
     device : str
-        The updated device string, specifying which GPU to use (e.g., "cuda:0", "cuda:1", etc.), 
+        The updated device string, specifying which GPU to use (e.g., "cuda:0", "cuda:1", etc.),
         or retains the original device (e.g., "cpu") if no suitable GPU is found.
 
     Logic:
     ------
     1. If a GPU is available and the device is not set to "cpu":
-        - **Single GPU Mode (multi_gpu=False)**: 
+        - **Single GPU Mode (multi_gpu=False)**:
             - Checks the specified `gpu_id`'s memory and utilization.
             - If the memory usage is below 70% and GPU utilization is below 70%, sets the device to the appropriate GPU.
         - **Multi-GPU Mode (multi_gpu=True)**:
@@ -276,9 +287,7 @@ def select_model_device(gpu_id: int, multi_gpu: bool, device: str="cpu"):
     return device
 
 
-def xarray_profile_info(
-    raster_meta
-):
+def xarray_profile_info(raster_meta):
     """
     Save mask to file.
     Args:
@@ -286,23 +295,51 @@ def xarray_profile_info(
     Returns:
         None
     """
-    raster_meta["driver"] = 'GTiff' if raster_meta["driver"] == 'VRT' else raster_meta["driver"]
+    raster_meta["driver"] = (
+        "GTiff" if raster_meta["driver"] == "VRT" else raster_meta["driver"]
+    )
     profile_kwargs = {
-        'crs': raster_meta["crs"],  # Coordinate Reference System, using src.crs.to_string() to get a string representation
-        'transform': raster_meta['transform'],  # Affine transformation matrix
-        'count': 1,  # Number of bands
-        'width': raster_meta['width'],  # Width of the raster
-        'height': raster_meta['height'],  # Height of the raster
-        'driver': raster_meta["driver"],  # Raster format driver
-        'dtype': "uint8",  # Data type (use dtype directly if it's a valid format for xarray)
-        'BIGTIFF': 'YES',  # BigTIFF option
-        'compress': 'lzw'  # Compression type
+        "crs": raster_meta[
+            "crs"
+        ],  # Coordinate Reference System, using src.crs.to_string() to get a string representation
+        "transform": raster_meta["transform"],  # Affine transformation matrix
+        "count": 1,  # Number of bands
+        "width": raster_meta["width"],  # Width of the raster
+        "height": raster_meta["height"],  # Height of the raster
+        "driver": raster_meta["driver"],  # Raster format driver
+        "dtype": "uint8",  # Data type (use dtype directly if it's a valid format for xarray)
+        "BIGTIFF": "YES",  # BigTIFF option
+        "compress": "lzw",  # Compression type
     }
     return profile_kwargs
 
 
+def has_internal_mask(raster: str | Path) -> bool:
+    """True when the raster carries a GDAL per-dataset mask."""
+    with rasterio.open(raster) as ds:
+        return any(MaskFlags.per_dataset in flags for flags in ds.mask_flag_enums)
+
+
+def read_dataset_mask(raster: str | Path, chunks: tuple[int, int]) -> da.Array:
+    """Lazy boolean mask, True where valid. Each block opens its own dataset."""
+    raster = str(raster)
+    with rasterio.open(raster) as ds:
+        shape = (ds.height, ds.width)
+
+    def _read_block(block, block_info=None):
+        (row_start, row_stop), (col_start, col_stop) = block_info[0]["array-location"]
+        window = Window(
+            col_start, row_start, col_stop - col_start, row_stop - row_start
+        )
+        with rasterio.open(raster) as ds:
+            return ds.dataset_mask(window=window) > 0
+
+    template = da.empty(shape, chunks=chunks, dtype=bool)
+    return template.map_blocks(_read_block, dtype=bool)
+
+
 def get_tiff_paths_from_csv(
-    csv_path: Union[str, Path],
+    csv_path: str | Path,
 ):
     """
     Creates list of to-be-processed tiff files from a csv file referencing input data
@@ -326,13 +363,11 @@ def get_tiff_paths_from_csv(
             try:
                 aois_dictionary.append(aoi_dict)
             except FileNotFoundError as e:
-                logger.error(
-                    f"{e}" f"Failed to get the path of :\n{aoi_dict}\n" f"Index: {i}"
-                )
+                logger.error(f"{e}Failed to get the path of :\n{aoi_dict}\nIndex: {i}")
     return aois_dictionary
 
 
-def asset_by_common_name(raster_raw_input) -> Dict:
+def asset_by_common_name(raster_raw_input) -> dict:
     """
     Get assets by common band name (only works for assets containing 1 band)
     Adapted from:
@@ -363,7 +398,7 @@ def asset_by_common_name(raster_raw_input) -> Dict:
     return _assets_by_common_name
 
 
-def read_csv(csv_file_name: str) -> Dict:
+def read_csv(csv_file_name: str) -> list[dict]:
     """
     Open csv file and parse it, returning a list of dictionaries with keys:
     - "tif": path to a single image
@@ -452,9 +487,7 @@ def cmd_interface(argv=None):
         help="bands_requested in this format '-b Red Green Blue' or '-br 1 2 3'",
     )
 
-    parser.add_argument(
-        "-i", "--image", nargs=1, help="Path or URL to the input image"
-    )
+    parser.add_argument("-i", "--image", nargs=1, help="Path or URL to the input image")
 
     parser.add_argument("-m", "--model", nargs=1, help="Path or URL to the model file")
 
@@ -462,13 +495,17 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-ps", "--patch_size", type=int, nargs=1, help="The Patch Size")
 
-    parser.add_argument("-w", "--workers", type=int, nargs=1, default=0, help="Numbers of workers")
+    parser.add_argument(
+        "-w", "--workers", type=int, nargs=1, default=0, help="Numbers of workers"
+    )
 
     parser.add_argument("-v", "--vec", nargs=1, help="Vector Conversion")
 
     parser.add_argument("-mg", "--mgpu", nargs=1, help="Multi GPU")
 
-    parser.add_argument("-cls", "--classes", type=int, nargs=1, help="Inference Classes")
+    parser.add_argument(
+        "-cls", "--classes", type=int, nargs=1, help="Inference Classes"
+    )
 
     parser.add_argument("-y", "--yolo", nargs=1, help="Yolo Conversion")
 
@@ -476,21 +513,45 @@ def cmd_interface(argv=None):
 
     parser.add_argument("-d", "--device", nargs=1, help="CPU or GPU Device")
 
-    parser.add_argument("-id", "--gpu_id", nargs=1, help="GPU ID", default = 0)
-    
-    parser.add_argument("-pr", "--prediction_thr", type=float, nargs=1, help="Prediction Threshold")
-    
-    parser.add_argument("-tr", "--transformers", nargs=1, help="Transformers Addition")
-    parser.add_argument("-tr_f", "--transformer_flip", nargs=1, help="Transformers Addition - Flip")
-    parser.add_argument("-tr_e", "--transformer_rotate", nargs=1, help="Transformers Addition - Rotate")
-    
+    parser.add_argument("-id", "--gpu_id", nargs=1, help="GPU ID", default=0)
+
+    parser.add_argument(
+        "-pr", "--prediction_thr", type=float, nargs=1, help="Prediction Threshold"
+    )
+
+    parser.add_argument(
+        "--post_inference",
+        action="store_true",
+        help=("Perform post-inference operations."),
+    )
+
+    parser.add_argument(
+        "-ppc",
+        "--patches_per_chunk",
+        type=int,
+        nargs=1,
+        help="Patches per chunk and axis. Default: 4 on GPU, 1 on CPU",
+    )
+
+    parser.add_argument(
+        "-bs",
+        "--batch_size",
+        type=int,
+        nargs=1,
+        help="Max patches per forward. Default: derived from the patch size",
+    )
+
     args = parser.parse_args()
 
     if args.args:
         config = read_yaml(args.args[0])
         image = config["arguments"]["image"]
         model = config["arguments"]["model"]
-        bbox = None if config["arguments"]["bbox"] == "None" else config["arguments"]["bbox"]
+        bbox = (
+            None
+            if config["arguments"]["bbox"] == "None"
+            else config["arguments"]["bbox"]
+        )
         work_dir = config["arguments"]["work_dir"]
         bands_requested = config["arguments"]["bands_requested"]
         workers = config["arguments"]["workers"]
@@ -503,12 +564,11 @@ def cmd_interface(argv=None):
         classes = config["arguments"]["classes"]
         patch_size = config["arguments"]["patch_size"]
         prediction_threshold = config["arguments"]["prediction_thr"]
-        transformers = config["arguments"]["transformers"]
-        transformer_flip = config["arguments"]["transformer_flip"]
-        transformer_rotate = config["arguments"]["transformer_rotate"]
-
+        post_inference = bool(config["arguments"].get("post_inference", False))
+        patches_per_chunk = int(config["arguments"].get("patches_per_chunk", 0))
+        batch_size = int(config["arguments"].get("batch_size", 0))
     elif args.image:
-        image =args.image[0]
+        image = args.image[0]
         model = args.model[0] if args.model else None
         bbox = args.bbox[0] if args.bbox else None
         work_dir = args.work_dir[0] if args.work_dir else None
@@ -521,12 +581,11 @@ def cmd_interface(argv=None):
         gpu_id = args.gpu_id[0] if args.gpu_id else 0
         multi_gpu = args.mgpu[0] if args.mgpu else False
         classes = args.classes[0] if args.classes else 5
-        patch_size = args.patch_size[0] if args.patch_size else 1024 
+        patch_size = args.patch_size[0] if args.patch_size else 1024
         prediction_threshold = args.prediction_thr[0] if args.prediction_thr else 0.3
-        transformers = args.transformers[0] if args.transformers else False
-        transformer_flip = args.transformer_flip if args.transformer_flip else False
-        transformer_rotate = args.transformer_rotate if args.transformer_rotate else False
-    
+        post_inference = bool(args.post_inference)
+        patches_per_chunk = args.patches_per_chunk[0] if args.patches_per_chunk else 0
+        batch_size = args.batch_size[0] if args.batch_size else 0
     else:
         print("use the help [-h] option for correct usage")
         raise SystemExit
@@ -546,9 +605,9 @@ def cmd_interface(argv=None):
         "gpu_id": gpu_id,
         "patch_size": patch_size,
         "prediction_threshold": prediction_threshold,
-        "transformers": transformers,
-        "transformer_flip": transformer_flip,
-        "transformer_rotate":transformer_rotate,
+        "post_inference": post_inference,
+        "patches_per_chunk": patches_per_chunk,
+        "batch_size": batch_size,
     }
     return arguments
 

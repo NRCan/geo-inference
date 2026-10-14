@@ -11,9 +11,6 @@ from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
 from pyogrio.errors import DataSourceError
 
-
-from ..config.logging_config import logger
-
 logger = logging.getLogger(__name__)
 
 """Utility funtions adapted from Solaris: https://github.com/CosmiQ/solaris/blob/main/solaris/utils/core.py"""
